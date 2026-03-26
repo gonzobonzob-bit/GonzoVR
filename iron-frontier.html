@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRON FRONTIER — VR Tower Defense</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0500; font-family:'Courier New',monospace; overflow:hidden; }
+
+  #hud {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:14px 20px; pointer-events:none;
+    background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);
+  }
+
+  .hud-block { pointer-events:auto; }
+
+  .hud-label { font-size:9px; letter-spacing:3px; color:#7a5522; margin-bottom:2px; }
+  .hud-value { font-size:22px; color:#c9a84c; letter-spacing:2px; text-shadow:0 0 10px rgba(201,168,76,0.5); }
+
+  #wave-banner {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:200; text-align:center; pointer-events:none;
+    transition:opacity 0.5s;
+  }
+
+  #wave-title {
+    font-size:48px; color:#c0431a; letter-spacing:8px;
+    text-shadow:0 0 30px rgba(192,67,26,0.8);
+    animation:wavePulse 0.5s ease infinite alternate;
+  }
+
+  #wave-sub { font-size:13px; letter-spacing:5px; color:#c9a84c; margin-top:8px; }
+
+  @keyframes wavePulse { from{transform:scale(1)} to{transform:scale(1.04)} }
+
+  #tower-menu {
+    position:fixed; bottom:0; left:0; right:0;
+    display:flex; justify-content:center; gap:10px;
+    padding:14px 20px 18px;
+    background:linear-gradient(to top,rgba(0,0,0,0.85),transparent);
+    z-index:100;
+  }
+
+  .tower-btn {
+    background:rgba(10,5,0,0.9);
+    border:1px solid #3a2800;
+    color:#c9a84c;
+    padding:10px 16px;
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    letter-spacing:2px;
+    cursor:pointer;
+    transition:all 0.2s;
+    text-align:center;
+    min-width:90px;
+  }
+
+  .tower-btn:hover, .tower-btn.selected {
+    border-color:#c9a84c;
+    background:rgba(201,168,76,0.1);
+    color:#fff;
+  }
+
+  .tower-btn .t-cost { font-size:9px; color:#7a5522; margin-top:3px; }
+  .tower-btn .t-icon { font-size:18px; margin-bottom:3px; }
+
+  #game-over {
+    position:fixed; inset:0; z-index:300;
+    background:rgba(0,0,0,0.85);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    display:none;
+  }
+
+  #game-over h1 { font-size:64px; color:#c0431a; letter-spacing:8px; text-shadow:0 0 40px rgba(192,67,26,0.8); }
+  #game-over p { color:#c9a84c; letter-spacing:4px; margin:16px 0 32px; font-size:13px; }
+  #restart-btn {
+    padding:14px 40px; background:transparent;
+    border:1px solid #c9a84c; color:#c9a84c;
+    font-family:'Courier New',monospace; font-size:13px;
+    letter-spacing:4px; cursor:pointer;
+    transition:all 0.2s;
+  }
+  #restart-btn:hover { background:rgba(201,168,76,0.15); }
+
+  #instructions {
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
+    z-index:100; text-align:center; pointer-events:none;
+    font-size:10px; letter-spacing:3px; color:#5a3a18;
+    background:rgba(0,0,0,0.5); padding:6px 14px;
+  }
+
+  .hidden { opacity:0!important; pointer-events:none!important; }
+</style>
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-block">
+    <div class="hud-label">GOLD</div>
+    <div class="hud-value" id="gold-display">150</div>
+  </div>
+  <div class="hud-block" style="text-align:center">
+    <div class="hud-label">WAVE</div>
+    <div class="hud-value" id="wave-display">0</div>
+  </div>
+  <div class="hud-block" style="text-align:right">
+    <div class="hud-label">LIVES</div>
+    <div class="hud-value" id="lives-display">♥♥♥♥♥</div>
+  </div>
+</div>
+
+<!-- Wave Banner -->
+<div id="wave-banner" class="hidden">
+  <div id="wave-title">WAVE 1</div>
+  <div id="wave-sub">RAIDERS INCOMING FROM THE NORTH</div>
+</div>
+
+<!-- Tower Selection Menu -->
+<div id="tower-menu">
+  <button class="tower-btn selected" data-type="watchtower" onclick="selectTower('watchtower',this)">
+    <div class="t-icon">🪵</div>
+    WATCH<br>TOWER
+    <div class="t-cost">40g · RIFLE</div>
+  </button>
+  <button class="tower-btn" data-type="cannon" onclick="selectTower('cannon',this)">
+    <div class="t-icon">💣</div>
+    CANNON
+    <div class="t-cost">80g · AOE</div>
+  </button>
+  <button class="tower-btn" data-type="bonfire" onclick="selectTower('bonfire',this)">
+    <div class="t-icon">🔥</div>
+    BONFIRE
+    <div class="t-cost">50g · SLOW</div>
+  </button>
+  <button class="tower-btn" data-type="tesla" onclick="selectTower('tesla',this)">
+    <div class="t-icon">⚡</div>
+    TESLA<br>COIL
+    <div class="t-cost">110g · CHAIN</div>
+  </button>
+</div>
+
+<div id="instructions">CLICK GROUND TO PLACE TOWER · WASD/LOOK TO MOVE · SELECT TOWER BELOW</div>
+
+<!-- Game Over -->
+<div id="game-over">
+  <h1>FORT FALLEN</h1>
+  <p id="final-score">SURVIVED 0 WAVES</p>
+  <button id="restart-btn" onclick="restartGame()">↺ TRY AGAIN</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ A-FRAME SCENE ═══ -->
+<a-scene
+  vr-mode-ui="enabled:true"
+  renderer="antialias:true; colorManagement:true; physicallyCorrectLights:true; logarithmicDepthBuffer:true"
+  background="color:#0d0805"
+  loading-screen="enabled:false"
+  id="main-scene"
+>
+  <a-assets timeout="10000"></a-assets>
+
+  <!-- ── CAMERA RIG ── -->
+  <a-entity id="rig" position="0 0 0">
+    <a-entity
+      id="cam"
+      camera="fov:80; near:0.05"
+      look-controls="pointerLockEnabled:false; magicWindowTrackingEnabled:true"
+      wasd-controls="acceleration:12"
+      position="0 1.65 0"
+    >
+      <!-- Desktop crosshair cursor -->
+      <a-entity
+        cursor="fuse:false; rayOrigin:mouse"
+        raycaster="objects:.placeable,.enemy-hit; far:60; interval:50"
+        geometry="primitive:ring; radiusInner:0.008; radiusOuter:0.013"
+        material="color:#c9a84c; shader:flat; opacity:0.9"
+        position="0 0 -1"
+      ></a-entity>
+    </a-entity>
+
+    <!-- VR Controllers -->
+    <a-entity id="left-hand"
+      oculus-touch-controls="hand:left"
+      position="-0.2 -0.3 -0.4"
+    ></a-entity>
+    <a-entity id="right-hand"
+      oculus-touch-controls="hand:right"
+      raycaster="objects:.placeable; far:40; showLine:true; lineColor:#c9a84c; lineOpacity:0.6"
+      position="0.2 -0.3 -0.4"
+    ></a-entity>
+  </a-entity>
+
+  <!-- ── LIGHTING ── -->
+  <a-entity light="type:ambient; color:#1a0d05; intensity:2"></a-entity>
+  <!-- Sunset directional -->
+  <a-entity light="type:directional; color:#ff6620; intensity:1.2; castShadow:false"
+    position="-3 2 -5"></a-entity>
+  <!-- Moonlight fill -->
+  <a-entity light="type:directional; color:#3355aa; intensity:0.3"
+    position="2 4 2"></a-entity>
+  <!-- Fort lantern glows -->
+  <a-entity light="type:point; color:#ffcc44; intensity:1.5; distance:8; decay:2" position="0 3.5 0"></a-entity>
+  <a-entity light="type:point; color:#ff8822; intensity:0.8; distance:5; decay:2" position="-6 2 0"></a-entity>
+  <a-entity light="type:point; color:#ff8822; intensity:0.8; distance:5; decay:2" position="6 2 0"></a-entity>
+
+  <!-- ── TERRAIN ── -->
+  <!-- Vast dusty ground plane -->
+  <a-plane id="ground-plane" class="placeable"
+    rotation="-90 0 0" width="120" height="120"
+    material="color:#2d1505; roughness:1; metalness:0"
+    position="0 0 0"
+  ></a-plane>
+
+  <!-- Ground variation — darker patches -->
+  <a-plane rotation="-90 0 0" width="30" height="20" position="15 0.01 -25"
+    material="color:#1f0e03; roughness:1; opacity:0.6; transparent:true"></a-plane>
+  <a-plane rotation="-90 0 0" width="20" height="30" position="-20 0.01 20"
+    material="color:#251103; roughness:1; opacity:0.5; transparent:true"></a-plane>
+  <a-plane rotation="-90 0 0" width="40" height="15" position="-10 0.01 -15"
+    material="color:#220f02; roughness:1; opacity:0.4; transparent:true"></a-plane>
+
+  <!-- ── SKY ── -->
+  <a-sky color="#0d0508"></a-sky>
+
+  <!-- Stars -->
+  <a-entity id="stars-container"></a-entity>
+
+  <!-- Sunset glow on horizon -->
+  <a-torus radius="50" radius-tubular="3" segments-radial="4" segments-tubular="32"
+    rotation="90 0 0" position="0 -2 0"
+    material="color:#8b2200; emissive:#5a1500; emissiveIntensity:0.6; opacity:0.15; transparent:true; side:back">
+  </a-torus>
+
+  <!-- Distant mountains (silhouettes) -->
+  <a-entity id="mountains"></a-entity>
+
+  <!-- ── FORT STRUCTURE ── -->
+  <!-- Main fort walls (4 sides) -->
+  <!-- North wall -->
+  <a-box width="14" height="3" depth="0.5" position="0 1.5 -7"
+    material="color:#4a2d0a; roughness:0.9; metalness:0.05"></a-box>
+  <!-- South wall -->
+  <a-box width="14" height="3" depth="0.5" position="0 1.5 7"
+    material="color:#4a2d0a; roughness:0.9; metalness:0.05"></a-box>
+  <!-- East wall -->
+  <a-box width="0.5" height="3" depth="14" position="7 1.5 0"
+    material="color:#3d2508; roughness:0.9; metalness:0.05"></a-box>
+  <!-- West wall -->
+  <a-box width="0.5" height="3" depth="14" position="-7 1.5 0"
+    material="color:#3d2508; roughness:0.9; metalness:0.05"></a-box>
+
+  <!-- Wall tops / battlements -->
+  <a-box width="14.5" height="0.3" depth="0.7" position="0 3.15 -7"
+    material="color:#5a3810; roughness:0.9"></a-box>
+  <a-box width="14.5" height="0.3" depth="0.7" position="0 3.15 7"
+    material="color:#5a3810; roughness:0.9"></a-box>
+  <a-box width="0.7" height="0.3" depth="14.5" position="7 3.15 0"
+    material="color:#5a3810; roughness:0.9"></a-box>
+  <a-box width="0.7" height="0.3" depth="14.5" position="-7 3.15 0"
+    material="color:#5a3810; roughness:0.9"></a-box>
+
+  <!-- Corner towers -->
+  <a-cylinder radius="1.1" height="4" position="-7 2 -7"
+    material="color:#3d2508; roughness:0.9"></a-cylinder>
+  <a-cylinder radius="1.1" height="4" position="7 2 -7"
+    material="color:#3d2508; roughness:0.9"></a-cylinder>
+  <a-cylinder radius="1.1" height="4" position="-7 2 7"
+    material="color:#3d2508; roughness:0.9"></a-cylinder>
+  <a-cylinder radius="1.1" height="4" position="7 2 7"
+    material="color:#3d2508; roughness:0.9"></a-cylinder>
+
+  <!-- Corner tower caps -->
+  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="-7 4.6 -7"
+    material="color:#2d1a05; roughness:0.9"></a-cone>
+  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="7 4.6 -7"
+    material="color:#2d1a05; roughness:0.9"></a-cone>
+  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="-7 4.6 7"
+    material="color:#2d1a05; roughness:0.9"></a-cone>
+  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="7 4.6 7"
+    material="color:#2d1a05; roughness:0.9"></a-cone>
+
+  <!-- Command table center -->
+  <a-cylinder radius="0.6" height="0.06" position="0 0.82 0"
+    material="color:#3d2008; roughness:0.8"></a-cylinder>
+  <a-cylinder radius="0.05" height="0.82" position="0 0.41 0"
+    material="color:#2d1505; roughness:0.9"></a-cylinder>
+  <!-- Map on table -->
+  <a-plane width="1.0" height="0.8" rotation="-90 0 0" position="0 0.86 0"
+    material="color:#c8a060; roughness:1; opacity:0.9"></a-plane>
+  <!-- Campfire -->
+  <a-cylinder radius="0.25" height="0.05" position="2 0.025 2"
+    material="color:#2a1505; roughness:1"></a-cylinder>
+  <a-cone radius-bottom="0.2" radius-top="0.01" height="0.4" position="2 0.22 2"
+    material="color:#ff6600; emissive:#cc3300; emissiveIntensity:0.8; opacity:0.85; transparent:true"
+    animation="property:scale; from:1 1 1; to:0.9 1.1 0.9; dur:200; dir:alternate; easing:easeInOutSine; loop:true">
+  </a-cone>
+  <a-entity light="type:point; color:#ff8822; intensity:2; distance:6; decay:2" position="2 0.5 2"
+    animation="property:light.intensity; from:2; to:1.4; dur:180; dir:alternate; easing:easeInOutSine; loop:true">
+  </a-entity>
+
+  <!-- ── TOWER GHOST (placement preview) ── -->
+  <a-entity id="tower-ghost" visible="false">
+    <a-cylinder id="ghost-body" radius="0.35" height="2" position="0 1 0"
+      material="color:#c9a84c; opacity:0.35; transparent:true; wireframe:false"></a-cylinder>
+    <a-circle radius="4" rotation="-90 0 0" position="0 0.02 0"
+      material="color:#c9a84c; opacity:0.12; transparent:true"></a-circle>
+  </a-entity>
+
+  <!-- ── DYNAMIC ENTITIES CONTAINER ── -->
+  <a-entity id="towers-container"></a-entity>
+  <a-entity id="enemies-container"></a-entity>
+  <a-entity id="projectiles-container"></a-entity>
+  <a-entity id="fx-container"></a-entity>
+
+  <!-- Path markers (invisible, used for enemy pathing) -->
+  <!-- Enemies spawn at 4 compass directions and walk to center -->
+
+</a-scene>
+
+<!-- ══════════════════════════════════════════ GAME ENGINE ══════════════════ -->
+<script>
+'use strict';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+const G = {
+  gold: 150,
+  lives: 5,
+  wave: 0,
+  score: 0,
+  running: false,
+  waveActive: false,
+  selectedTower: 'watchtower',
+  towers: [],
+  enemies: [],
+  projectiles: [],
+  nextEnemyId: 0,
+  nextTowerId: 0,
+  nextProjId: 0,
+  waveTimer: null,
+  gameLoop: null,
+  audioCtx: null,
+};
+
+// ── TOWER DEFS ─────────────────────────────────────────────────────────────
+const TOWER_DEFS = {
+  watchtower: {
+    name: 'Watchtower', cost: 40, range: 12, damage: 15, fireRate: 1200,
+    color: '#8B6914', emissive: '#5a4410', height: 2.5, radius: 0.3,
+    projColor: '#ffcc44', projSpeed: 20,
+  },
+  cannon: {
+    name: 'Cannon', cost: 80, range: 9, damage: 45, fireRate: 2800, aoe: 2.5,
+    color: '#555555', emissive: '#222222', height: 1.8, radius: 0.45,
+    projColor: '#888888', projSpeed: 14,
+  },
+  bonfire: {
+    name: 'Bonfire', cost: 50, range: 6, damage: 8, fireRate: 600, slow: 0.5,
+    color: '#ff6600', emissive: '#cc3300', height: 1.2, radius: 0.5,
+    projColor: '#ff4400', projSpeed: 18,
+  },
+  tesla: {
+    name: 'Tesla Coil', cost: 110, range: 8, damage: 30, fireRate: 1600, chain: 3,
+    color: '#44aaff', emissive: '#2266cc', height: 3.0, radius: 0.25,
+    projColor: '#88ddff', projSpeed: 25,
+  },
+};
+
+// ── ENEMY DEFS ─────────────────────────────────────────────────────────────
+const ENEMY_DEFS = {
+  raider:    { hp: 60,  speed: 3.5, reward: 10, color: '#882200', scale: 1.0 },
+  horseman:  { hp: 40,  speed: 6.0, reward: 15, color: '#553311', scale: 0.85 },
+  dynamiter: { hp: 80,  speed: 2.5, reward: 18, color: '#664400', scale: 1.1 },
+  armored:   { hp: 220, speed: 1.8, reward: 35, color: '#444444', scale: 1.3 },
+  boss:      { hp: 600, speed: 1.5, reward: 80, color: '#1a0000', scale: 2.0 },
+};
+
+// Spawn directions — 4 compass points far out
+const SPAWN_POINTS = [
+  {x:0,  z:-50}, // North
+  {x:50, z:0},   // East
+  {x:0,  z:50},  // South
+  {x:-50,z:0},   // West
+];
+
+// ── ELEMENT REFS ──────────────────────────────────────────────────────────
+const goldDisplay  = document.getElementById('gold-display');
+const waveDisplay  = document.getElementById('wave-display');
+const livesDisplay = document.getElementById('lives-display');
+const waveBanner   = document.getElementById('wave-banner');
+const waveTitle    = document.getElementById('wave-title');
+const waveSub      = document.getElementById('wave-sub');
+const towerGhost   = document.getElementById('tower-ghost');
+const ghostBody    = document.getElementById('ghost-body');
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.querySelector('a-scene').addEventListener('loaded', () => {
+  buildEnvironment();
+  setupInput();
+  initAudio();
+  startGame();
+});
+
+function startGame() {
+  G.gold = 150; G.lives = 5; G.wave = 0;
+  G.towers = []; G.enemies = []; G.projectiles = [];
+  G.running = true;
+  updateHUD();
+  document.getElementById('game-over').style.display = 'none';
+  if (G.gameLoop) clearInterval(G.gameLoop);
+  G.gameLoop = setInterval(tick, 50); // 20 fps logic
+  setTimeout(startNextWave, 3000);
+}
+
+// ── ENVIRONMENT ───────────────────────────────────────────────────────────
+function buildEnvironment() {
+  const scene = document.querySelector('a-scene');
+
+  // Stars
+  const starContainer = document.getElementById('stars-container');
+  for (let i = 0; i < 200; i++) {
+    const s = document.createElement('a-sphere');
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.random() * Math.PI * 0.4;
+    const r     = 90;
+    s.setAttribute('radius', (Math.random() * 0.12 + 0.04).toFixed(2));
+    s.setAttribute('position', `${(r*Math.sin(phi)*Math.cos(theta)).toFixed(1)} ${(r*Math.cos(phi)+5).toFixed(1)} ${(r*Math.sin(phi)*Math.sin(theta)).toFixed(1)}`);
+    s.setAttribute('material', `color:#ffffff; emissive:#ffffff; emissiveIntensity:${(Math.random()*0.8+0.2).toFixed(2)}; shader:flat`);
+    s.setAttribute('segments-width', '4');
+    s.setAttribute('segments-height', '4');
+    starContainer.appendChild(s);
+  }
+
+  // Mountains (distant silhouettes)
+  const mtnContainer = document.getElementById('mountains');
+  const mtnPositions = [
+    {x:-40,z:-55,w:18,h:12}, {x:-20,z:-58,w:22,h:16}, {x:5,z:-60,w:28,h:14},
+    {x:30,z:-57,w:20,h:18}, {x:50,z:-52,w:16,h:10},
+    {x:-55,z:-20,w:14,h:12}, {x:-58,z:10,w:16,h:10},
+    {x:55,z:-15,w:14,h:14}, {x:58,z:15,w:18,h:11},
+    {x:-30,z:55,w:20,h:12}, {x:10,z:58,w:24,h:14}, {x:40,z:54,w:18,h:10},
+  ];
+  mtnPositions.forEach(m => {
+    const cone = document.createElement('a-cone');
+    cone.setAttribute('radius-bottom', (m.w/2).toFixed(1));
+    cone.setAttribute('radius-top', '0.5');
+    cone.setAttribute('height', m.h);
+    cone.setAttribute('position', `${m.x} ${m.h/2-1} ${m.z}`);
+    cone.setAttribute('material', 'color:#1a0a03; roughness:1');
+    cone.setAttribute('segments-radial', '6');
+    mtnContainer.appendChild(cone);
+  });
+
+  // Rocks scattered around
+  const rockPositions = [
+    [15,0,-20],[−18,0,22],[-12,0,-30],[22,0,18],[-25,0,8],
+    [30,0,-10],[8,0,35],[-35,0,-15],[20,0,28],[-8,0,-35]
+  ];
+  rockPositions.forEach(([x,y,z]) => {
+    const r = document.createElement('a-sphere');
+    const sz = (Math.random()*0.6+0.2).toFixed(2);
+    r.setAttribute('radius', sz);
+    r.setAttribute('position', `${x} 0.1 ${z}`);
+    r.setAttribute('scale', `1 ${(Math.random()*0.5+0.5).toFixed(2)} 1`);
+    r.setAttribute('material', 'color:#3a1f08; roughness:1');
+    r.setAttribute('segments-width', '5');
+    r.setAttribute('segments-height', '4');
+    scene.appendChild(r);
+  });
+
+  // Fence posts along path approaches
+  for (let i = 0; i < 6; i++) {
+    const post = document.createElement('a-box');
+    post.setAttribute('width','0.1');
+    post.setAttribute('height','1.2');
+    post.setAttribute('depth','0.1');
+    post.setAttribute('position', `${-3 + i*1.1} 0.6 -8`);
+    post.setAttribute('material', 'color:#3d2008; roughness:0.9');
+    scene.appendChild(post);
+  }
+
+  // Dust clouds (static, atmospheric)
+  for (let i = 0; i < 8; i++) {
+    const dust = document.createElement('a-sphere');
+    const angle = (i/8) * Math.PI * 2;
+    const r = 20 + Math.random()*10;
+    dust.setAttribute('radius', (3 + Math.random()*4).toFixed(1));
+    dust.setAttribute('position', `${(Math.cos(angle)*r).toFixed(1)} 0.5 ${(Math.sin(angle)*r).toFixed(1)}`);
+    dust.setAttribute('material', `color:#8B4513; opacity:${(0.04+Math.random()*0.06).toFixed(2)}; transparent:true`);
+    dust.setAttribute('segments-width','6');
+    dust.setAttribute('segments-height','4');
+    scene.appendChild(dust);
+  }
+}
+
+// ── INPUT ──────────────────────────────────────────────────────────────────
+function setupInput() {
+  const ground = document.querySelector('#ground-plane');
+
+  // Desktop: click to place
+  ground.addEventListener('click', (e) => {
+    if (!G.running) return;
+    const intersection = e.detail.intersection;
+    if (!intersection) return;
+    const p = intersection.point;
+    // Don't place inside fort
+    if (Math.abs(p.x) < 8 && Math.abs(p.z) < 8) return;
+    tryPlaceTower(p.x, p.z);
+  });
+
+  // Mouse move: show ghost
+  ground.addEventListener('mousemove', (e) => {
+    if (!G.running) return;
+    const intersection = e.detail.intersection;
+    if (!intersection) { towerGhost.setAttribute('visible','false'); return; }
+    const p = intersection.point;
+    if (Math.abs(p.x) < 8 && Math.abs(p.z) < 8) { towerGhost.setAttribute('visible','false'); return; }
+    towerGhost.setAttribute('visible','true');
+    towerGhost.setAttribute('position', `${p.x.toFixed(2)} 0 ${p.z.toFixed(2)}`);
+    const def = TOWER_DEFS[G.selectedTower];
+    // Range ring
+    const ring = towerGhost.querySelector('a-circle');
+    ring.setAttribute('radius', def.range);
+    ring.setAttribute('material', `color:${def.color}; opacity:0.12; transparent:true`);
+    ghostBody.setAttribute('material', `color:${def.color}; opacity:0.4; transparent:true`);
+    ghostBody.setAttribute('height', def.height);
+    ghostBody.setAttribute('position', `0 ${def.height/2} 0`);
+  });
+
+  // VR right controller trigger
+  document.getElementById('right-hand').addEventListener('triggerdown', () => {
+    const raycaster = document.getElementById('right-hand').components.raycaster;
+    if (!raycaster) return;
+    const ints = raycaster.intersectedEls;
+    if (!ints.length) return;
+    const p = raycaster.getIntersection(ints[0]);
+    if (p) tryPlaceTower(p.point.x, p.point.z);
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    const keys = {'1':'watchtower','2':'cannon','3':'bonfire','4':'tesla'};
+    if (keys[e.key]) {
+      selectTower(keys[e.key], document.querySelector(`[data-type="${keys[e.key]}"]`));
+    }
+  });
+}
+
+function selectTower(type, btn) {
+  G.selectedTower = type;
+  document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+}
+
+// ── TOWER PLACEMENT ────────────────────────────────────────────────────────
+function tryPlaceTower(x, z) {
+  const def = TOWER_DEFS[G.selectedTower];
+  if (G.gold < def.cost) { playSound('deny'); return; }
+
+  // Check not overlapping existing tower
+  for (const t of G.towers) {
+    const dx = t.x - x, dz = t.z - z;
+    if (Math.sqrt(dx*dx+dz*dz) < 1.5) { playSound('deny'); return; }
+  }
+
+  G.gold -= def.cost;
+  updateHUD();
+  playSound('place');
+
+  const id = G.nextTowerId++;
+  const tower = {
+    id, type: G.selectedTower, x, z,
+    def, lastFired: 0, target: null,
+    el: buildTowerEntity(G.selectedTower, x, z, def, id),
+  };
+  G.towers.push(tower);
+}
+
+function buildTowerEntity(type, x, z, def, id) {
+  const scene = document.querySelector('a-scene');
+  const container = document.getElementById('towers-container');
+  const el = document.createElement('a-entity');
+  el.setAttribute('id', `tower-${id}`);
+  el.setAttribute('position', `${x.toFixed(2)} 0 ${z.toFixed(2)}`);
+
+  // Base platform
+  const base = document.createElement('a-cylinder');
+  base.setAttribute('radius', (def.radius+0.15).toFixed(2));
+  base.setAttribute('height', '0.15');
+  base.setAttribute('position', `0 0.07 0`);
+  base.setAttribute('material', `color:#2d1505; roughness:0.9`);
+  el.appendChild(base);
+
+  // Main body
+  const body = document.createElement('a-cylinder');
+  body.setAttribute('radius', def.radius.toFixed(2));
+  body.setAttribute('height', def.height.toFixed(2));
+  body.setAttribute('position', `0 ${def.height/2} 0`);
+  body.setAttribute('material', `color:${def.color}; emissive:${def.emissive}; emissiveIntensity:0.3; roughness:0.7`);
+  el.appendChild(body);
+
+  // Type-specific decorations
+  if (type === 'watchtower') {
+    const top = document.createElement('a-box');
+    top.setAttribute('width','0.8'); top.setAttribute('height','0.5'); top.setAttribute('depth','0.8');
+    top.setAttribute('position',`0 ${def.height+0.25} 0`);
+    top.setAttribute('material',`color:#6b4010; roughness:0.9`);
+    el.appendChild(top);
+    // Rifle barrel
+    const barrel = document.createElement('a-cylinder');
+    barrel.setAttribute('radius','0.04'); barrel.setAttribute('height','0.8');
+    barrel.setAttribute('rotation','90 0 0');
+    barrel.setAttribute('position',`0 ${def.height+0.3} -0.5`);
+    barrel.setAttribute('material',`color:#444; metalness:0.8`);
+    el.appendChild(barrel);
+  } else if (type === 'cannon') {
+    const barrel = document.createElement('a-cylinder');
+    barrel.setAttribute('radius','0.12'); barrel.setAttribute('height','0.9');
+    barrel.setAttribute('rotation','90 0 0');
+    barrel.setAttribute('position',`0 ${def.height-0.2} -0.5`);
+    barrel.setAttribute('material',`color:#333; metalness:0.9; roughness:0.2`);
+    el.appendChild(barrel);
+    const wheel = document.createElement('a-torus');
+    wheel.setAttribute('radius','0.35'); wheel.setAttribute('radius-tubular','0.05');
+    wheel.setAttribute('rotation','0 90 0'); wheel.setAttribute('position',`0 0.6 0`);
+    wheel.setAttribute('material',`color:#4a2800; roughness:0.9`);
+    el.appendChild(wheel);
+  } else if (type === 'bonfire') {
+    const flame = document.createElement('a-cone');
+    flame.setAttribute('radius-bottom','0.3'); flame.setAttribute('radius-top','0.02');
+    flame.setAttribute('height','0.8'); flame.setAttribute('position',`0 ${def.height+0.4} 0`);
+    flame.setAttribute('material',`color:#ff6600; emissive:#cc3300; emissiveIntensity:1; opacity:0.9; transparent:true`);
+    flame.setAttribute('animation',`property:scale; from:1 1 1; to:0.85 1.15 0.85; dur:250; dir:alternate; easing:easeInOutSine; loop:true`);
+    el.appendChild(flame);
+    const light = document.createElement('a-entity');
+    light.setAttribute('light',`type:point; color:#ff8822; intensity:1.5; distance:${def.range}; decay:2`);
+    light.setAttribute('position',`0 ${def.height+0.5} 0`);
+    el.appendChild(light);
+  } else if (type === 'tesla') {
+    // Tall coil with glowing top
+    const coilTop = document.createElement('a-torus');
+    coilTop.setAttribute('radius','0.4'); coilTop.setAttribute('radius-tubular','0.06');
+    coilTop.setAttribute('position',`0 ${def.height+0.1} 0`);
+    coilTop.setAttribute('material',`color:#44aaff; emissive:#2266ff; emissiveIntensity:0.8`);
+    coilTop.setAttribute('animation',`property:rotation; from:0 0 0; to:0 360 0; dur:2000; easing:linear; loop:true`);
+    el.appendChild(coilTop);
+    const glow = document.createElement('a-entity');
+    glow.setAttribute('light',`type:point; color:#44aaff; intensity:1; distance:${def.range}; decay:2`);
+    glow.setAttribute('position',`0 ${def.height} 0`);
+    el.appendChild(glow);
+  }
+
+  // Range ring (always visible, subtle)
+  const ring = document.createElement('a-torus');
+  ring.setAttribute('radius', def.range.toFixed(1));
+  ring.setAttribute('radius-tubular','0.04');
+  ring.setAttribute('rotation','-90 0 0');
+  ring.setAttribute('position','0 0.05 0');
+  ring.setAttribute('material',`color:${def.color}; opacity:0.15; transparent:true`);
+  el.appendChild(ring);
+
+  container.appendChild(el);
+  return el;
+}
+
+// ── WAVE SYSTEM ────────────────────────────────────────────────────────────
+function startNextWave() {
+  if (!G.running) return;
+  G.wave++;
+  waveDisplay.textContent = G.wave;
+
+  const directions = ['NORTH','EAST','SOUTH','WEST'];
+  const dir = directions[Math.floor(Math.random()*4)];
+  waveTitle.textContent = `WAVE ${G.wave}`;
+  waveSub.textContent = `RAIDERS INCOMING FROM THE ${dir}`;
+  waveBanner.classList.remove('hidden');
+  playSound('wave');
+
+  setTimeout(() => {
+    waveBanner.classList.add('hidden');
+    spawnWave(G.wave);
+  }, 2500);
+}
+
+function spawnWave(waveNum) {
+  G.waveActive = true;
+  const count = 5 + waveNum * 2;
+  let spawned = 0;
+
+  const types = getWaveComposition(waveNum);
+  const spawnDir = Math.floor(Math.random() * 4);
+  const sp = SPAWN_POINTS[spawnDir];
+
+  const interval = setInterval(() => {
+    if (!G.running) { clearInterval(interval); return; }
+    if (spawned >= count) { clearInterval(interval); return; }
+
+    const type = types[Math.floor(Math.random() * types.length)];
+    const jitter = () => (Math.random()-0.5)*12;
+    spawnEnemy(type, sp.x + jitter(), sp.z + jitter());
+    spawned++;
+  }, 600 + Math.max(0, 400 - waveNum*20));
+}
+
+function getWaveComposition(wave) {
+  if (wave <= 2) return ['raider'];
+  if (wave <= 4) return ['raider','raider','horseman'];
+  if (wave <= 6) return ['raider','horseman','dynamiter'];
+  if (wave <= 9) return ['horseman','dynamiter','armored'];
+  return ['dynamiter','armored','boss'];
+}
+
+function spawnEnemy(type, x, z) {
+  const def = {...ENEMY_DEFS[type]};
+  const id = G.nextEnemyId++;
+  const el = buildEnemyEntity(type, x, z, def, id);
+
+  const enemy = { id, type, x, z, hp: def.hp, maxHp: def.hp, speed: def.speed, reward: def.reward, def, el, slowed: 0 };
+  G.enemies.push(enemy);
+}
+
+function buildEnemyEntity(type, x, z, def, id) {
+  const container = document.getElementById('enemies-container');
+  const el = document.createElement('a-entity');
+  el.setAttribute('id', `enemy-${id}`);
+  el.setAttribute('class', 'enemy-hit');
+  el.setAttribute('position', `${x.toFixed(2)} 0 ${z.toFixed(2)}`);
+
+  const sc = def.scale;
+
+  // Body
+  const body = document.createElement('a-box');
+  body.setAttribute('width', (0.5*sc).toFixed(2));
+  body.setAttribute('height', (1.0*sc).toFixed(2));
+  body.setAttribute('depth', (0.4*sc).toFixed(2));
+  body.setAttribute('position', `0 ${0.5*sc} 0`);
+  body.setAttribute('material', `color:${def.color}; roughness:0.8`);
+  el.appendChild(body);
+
+  // Head
+  const head = document.createElement('a-sphere');
+  head.setAttribute('radius', (0.2*sc).toFixed(2));
+  head.setAttribute('position', `0 ${1.15*sc} 0`);
+  head.setAttribute('material', `color:${def.color}; roughness:0.8`);
+  el.appendChild(head);
+
+  // Hat (cowboy)
+  if (type !== 'boss') {
+    const hat = document.createElement('a-cylinder');
+    hat.setAttribute('radius', (0.22*sc).toFixed(2));
+    hat.setAttribute('height', (0.25*sc).toFixed(2));
+    hat.setAttribute('position', `0 ${1.4*sc} 0`);
+    hat.setAttribute('material', `color:#1a0f00; roughness:1`);
+    el.appendChild(hat);
+    const brim = document.createElement('a-cylinder');
+    brim.setAttribute('radius', (0.35*sc).toFixed(2));
+    brim.setAttribute('height', (0.04*sc).toFixed(2));
+    brim.setAttribute('position', `0 ${1.28*sc} 0`);
+    brim.setAttribute('material', `color:#1a0f00; roughness:1`);
+    el.appendChild(brim);
+  } else {
+    // Boss gets horns
+    const h1 = document.createElement('a-cone');
+    h1.setAttribute('radius-bottom','0.08'); h1.setAttribute('radius-top','0.01'); h1.setAttribute('height','0.4');
+    h1.setAttribute('position',`-0.15 ${1.5*sc} 0`); h1.setAttribute('rotation','0 0 -20');
+    h1.setAttribute('material','color:#cc0000; emissive:#660000; emissiveIntensity:0.5');
+    el.appendChild(h1);
+    const h2 = h1.cloneNode();
+    h2.setAttribute('position',`0.15 ${1.5*sc} 0`); h2.setAttribute('rotation','0 0 20');
+    el.appendChild(h2);
+  }
+
+  // HP bar background
+  const hpBg = document.createElement('a-plane');
+  hpBg.setAttribute('class','hp-bg');
+  hpBg.setAttribute('width','0.6'); hpBg.setAttribute('height','0.07');
+  hpBg.setAttribute('position',`0 ${(1.6*sc+0.1)} 0`);
+  hpBg.setAttribute('material','color:#330000; opacity:0.8; transparent:true; shader:flat');
+  hpBg.setAttribute('look-at','#cam');
+  el.appendChild(hpBg);
+
+  // HP bar fill
+  const hpBar = document.createElement('a-plane');
+  hpBar.setAttribute('class','hp-fill');
+  hpBar.setAttribute('width','0.6'); hpBar.setAttribute('height','0.065');
+  hpBar.setAttribute('position',`0 ${(1.6*sc+0.1)} 0.001`);
+  hpBar.setAttribute('material','color:#cc2200; opacity:0.9; transparent:true; shader:flat');
+  hpBar.setAttribute('look-at','#cam');
+  el.appendChild(hpBar);
+
+  // Walk animation (bobbing)
+  el.setAttribute('animation__bob', `property:position; from:${x.toFixed(2)} 0 ${z.toFixed(2)}; to:${x.toFixed(2)} 0.08 ${z.toFixed(2)}; dur:300; dir:alternate; easing:easeInOutSine; loop:true`);
+
+  container.appendChild(el);
+  return el;
+}
+
+// ── GAME TICK ──────────────────────────────────────────────────────────────
+function tick() {
+  if (!G.running) return;
+  const now = Date.now();
+  const dt = 0.05; // 50ms
+
+  // Move enemies
+  const toRemove = [];
+  for (const enemy of G.enemies) {
+    if (enemy.hp <= 0) { toRemove.push(enemy); continue; }
+
+    const speed = enemy.slowed > 0 ? enemy.speed * 0.5 : enemy.speed;
+    if (enemy.slowed > 0) enemy.slowed -= dt;
+
+    // Move toward center
+    const dx = -enemy.x, dz = -enemy.z;
+    const dist = Math.sqrt(dx*dx+dz*dz);
+
+    if (dist < 2.5) {
+      // Reached fort
+      enemy.hp = 0;
+      G.lives--;
+      playSound('hit');
+      updateHUD();
+      if (G.lives <= 0) { gameOver(); return; }
+      toRemove.push(enemy);
+      continue;
+    }
+
+    const nx = dx/dist, nz = dz/dist;
+    enemy.x += nx * speed * dt;
+    enemy.z += nz * speed * dt;
+
+    if (enemy.el && enemy.el.parentNode) {
+      enemy.el.setAttribute('position', `${enemy.x.toFixed(3)} 0 ${enemy.z.toFixed(3)}`);
+      // Face direction of travel
+      const angle = Math.atan2(nx, nz) * 180 / Math.PI;
+      enemy.el.setAttribute('rotation', `0 ${angle.toFixed(1)} 0`);
+    }
+  }
+
+  // Remove dead/arrived enemies
+  for (const e of toRemove) removeEnemy(e);
+
+  // Tower fire
+  for (const tower of G.towers) {
+    if (now - tower.lastFired < tower.def.fireRate) continue;
+
+    // Find target in range
+    let closest = null, closestDist = Infinity;
+    for (const enemy of G.enemies) {
+      if (enemy.hp <= 0) continue;
+      const dx = enemy.x - tower.x, dz = enemy.z - tower.z;
+      const d = Math.sqrt(dx*dx+dz*dz);
+      if (d < tower.def.range && d < closestDist) {
+        closestDist = d; closest = enemy;
+      }
+    }
+
+    if (closest) {
+      tower.lastFired = now;
+      fireProjectile(tower, closest);
+    }
+  }
+
+  // Move projectiles
+  const projRemove = [];
+  for (const proj of G.projectiles) {
+    proj.x += proj.vx * dt;
+    proj.z += proj.vz * dt;
+    proj.life -= dt;
+
+    if (proj.el && proj.el.parentNode) {
+      proj.el.setAttribute('position', `${proj.x.toFixed(3)} ${proj.y.toFixed(3)} ${proj.z.toFixed(3)}`);
+    }
+
+    // Check hit
+    let hit = false;
+    for (const enemy of G.enemies) {
+      if (enemy.hp <= 0) continue;
+      const dx = enemy.x - proj.x, dz = enemy.z - proj.z;
+      if (Math.sqrt(dx*dx+dz*dz) < 0.8) {
+        // Hit!
+        if (proj.aoe) {
+          // AoE damage
+          for (const e2 of G.enemies) {
+            const dx2 = e2.x - proj.x, dz2 = e2.z - proj.z;
+            if (Math.sqrt(dx2*dx2+dz2*dz2) < proj.aoe) {
+              damageEnemy(e2, proj.damage);
+            }
+          }
+          spawnExplosion(proj.x, proj.z);
+        } else if (proj.chain) {
+          // Chain lightning
+          let targets = [enemy];
+          for (const e2 of G.enemies) {
+            if (targets.length >= proj.chain) break;
+            if (e2 === enemy || e2.hp <= 0) continue;
+            const dx2 = e2.x - enemy.x, dz2 = e2.z - enemy.z;
+            if (Math.sqrt(dx2*dx2+dz2*dz2) < 4) targets.push(e2);
+          }
+          targets.forEach(t => damageEnemy(t, proj.damage));
+        } else {
+          damageEnemy(enemy, proj.damage);
+          if (proj.slow) enemy.slowed = 2.0;
+        }
+        hit = true;
+        projRemove.push(proj);
+        break;
+      }
+    }
+    if (!hit && proj.life <= 0) projRemove.push(proj);
+  }
+  for (const p of projRemove) removeProjectile(p);
+
+  // Check wave clear
+  if (G.waveActive && G.enemies.length === 0) {
+    G.waveActive = false;
+    G.gold += 20 + G.wave * 5;
+    updateHUD();
+    playSound('waveClear');
+    setTimeout(startNextWave, 4000);
+  }
+}
+
+function damageEnemy(enemy, dmg) {
+  enemy.hp -= dmg;
+  if (enemy.hp <= 0) {
+    G.gold += enemy.reward;
+    G.score++;
+    updateHUD();
+    playSound('kill');
+    spawnDeathFX(enemy.x, enemy.z);
+  }
+  // Update HP bar
+  if (enemy.el) {
+    const fill = enemy.el.querySelector('.hp-fill');
+    if (fill) {
+      const pct = Math.max(0, enemy.hp / enemy.maxHp);
+      fill.setAttribute('scale', `${pct.toFixed(3)} 1 1`);
+      const col = pct > 0.5 ? '#22cc00' : pct > 0.25 ? '#ffaa00' : '#cc2200';
+      fill.setAttribute('material', `color:${col}; opacity:0.9; transparent:true; shader:flat`);
+    }
+  }
+}
+
+function removeEnemy(enemy) {
+  G.enemies = G.enemies.filter(e => e !== enemy);
+  if (enemy.el && enemy.el.parentNode) enemy.el.parentNode.removeChild(enemy.el);
+}
+
+// ── PROJECTILES ────────────────────────────────────────────────────────────
+function fireProjectile(tower, target) {
+  const def = tower.def;
+  const dx = target.x - tower.x, dz = target.z - tower.z;
+  const dist = Math.sqrt(dx*dx+dz*dz);
+  const nx = dx/dist, nz = dz/dist;
+
+  const id = G.nextProjId++;
+  const el = document.createElement('a-sphere');
+  el.setAttribute('id', `proj-${id}`);
+  el.setAttribute('radius', tower.type === 'cannon' ? '0.18' : '0.09');
+  el.setAttribute('segments-width','5'); el.setAttribute('segments-height','4');
+  el.setAttribute('position', `${tower.x.toFixed(2)} ${def.height-0.3} ${tower.z.toFixed(2)}`);
+  el.setAttribute('material', `color:${def.projColor}; emissive:${def.projColor}; emissiveIntensity:0.8; shader:flat`);
+
+  document.getElementById('projectiles-container').appendChild(el);
+
+  const proj = {
+    id, x: tower.x, z: tower.z, y: def.height - 0.3,
+    vx: nx * def.projSpeed, vz: nz * def.projSpeed,
+    damage: def.damage, life: 3.0, el,
+    aoe: def.aoe || null, chain: def.chain || null, slow: def.slow || null,
+  };
+  G.projectiles.push(proj);
+  playSound('fire', tower.type);
+}
+
+function removeProjectile(proj) {
+  G.projectiles = G.projectiles.filter(p => p !== proj);
+  if (proj.el && proj.el.parentNode) proj.el.parentNode.removeChild(proj.el);
+}
+
+// ── VFX ────────────────────────────────────────────────────────────────────
+function spawnExplosion(x, z) {
+  const el = document.createElement('a-sphere');
+  el.setAttribute('radius','0.1');
+  el.setAttribute('position',`${x.toFixed(2)} 0.5 ${z.toFixed(2)}`);
+  el.setAttribute('material','color:#ff6600; emissive:#ff3300; emissiveIntensity:1; opacity:0.9; transparent:true; shader:flat');
+  el.setAttribute('animation__scale','property:scale; from:1 1 1; to:8 8 8; dur:400; easing:easeOutQuad');
+  el.setAttribute('animation__fade','property:material.opacity; from:0.9; to:0; dur:400; easing:easeOutQuad');
+  document.getElementById('fx-container').appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+}
+
+function spawnDeathFX(x, z) {
+  for (let i = 0; i < 5; i++) {
+    const p = document.createElement('a-sphere');
+    p.setAttribute('radius','0.08');
+    const vx = (Math.random()-0.5)*3, vz = (Math.random()-0.5)*3;
+    p.setAttribute('position',`${x.toFixed(2)} 0.8 ${z.toFixed(2)}`);
+    p.setAttribute('material','color:#cc4400; emissive:#882200; emissiveIntensity:0.8; shader:flat');
+    p.setAttribute('animation__move',`property:position; from:${x.toFixed(2)} 0.8 ${z.toFixed(2)}; to:${(x+vx).toFixed(2)} 0.1 ${(z+vz).toFixed(2)}; dur:350; easing:easeOutQuad`);
+    p.setAttribute('animation__fade','property:material.opacity; from:1; to:0; dur:350');
+    document.getElementById('fx-container').appendChild(p);
+    setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 400);
+  }
+}
+
+// ── HUD ────────────────────────────────────────────────────────────────────
+function updateHUD() {
+  goldDisplay.textContent = G.gold;
+  waveDisplay.textContent = G.wave;
+  livesDisplay.textContent = '♥'.repeat(Math.max(0,G.lives)) + '♡'.repeat(Math.max(0,5-G.lives));
+}
+
+// ── GAME OVER ──────────────────────────────────────────────────────────────
+function gameOver() {
+  G.running = false;
+  clearInterval(G.gameLoop);
+  document.getElementById('final-score').textContent = `SURVIVED ${G.wave} WAVES · ${G.score} ENEMIES DEFEATED`;
+  document.getElementById('game-over').style.display = 'flex';
+  playSound('gameOver');
+}
+
+function restartGame() {
+  // Clear all entities
+  ['towers-container','enemies-container','projectiles-container','fx-container'].forEach(id => {
+    const c = document.getElementById(id);
+    while (c.firstChild) c.removeChild(c.firstChild);
+  });
+  G.towers=[]; G.enemies=[]; G.projectiles=[];
+  G.nextEnemyId=0; G.nextTowerId=0; G.nextProjId=0;
+  startGame();
+}
+
+// ── AUDIO ──────────────────────────────────────────────────────────────────
+function initAudio() {
+  const start = () => {
+    if (G.audioCtx) return;
+    G.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    playAmbient();
+  };
+  document.addEventListener('click', start, {once:true});
+  document.addEventListener('keydown', start, {once:true});
+}
+
+function playAmbient() {
+  if (!G.audioCtx) return;
+  // Wind howl
+  const buf = G.audioCtx.createBuffer(1, G.audioCtx.sampleRate*2, G.audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.3;
+  const src = G.audioCtx.createBufferSource();
+  src.buffer = buf; src.loop = true;
+  const filt = G.audioCtx.createBiquadFilter();
+  filt.type='lowpass'; filt.frequency.value=300;
+  const gain = G.audioCtx.createGain();
+  gain.gain.value=0.04;
+  src.connect(filt); filt.connect(gain); gain.connect(G.audioCtx.destination);
+  src.start();
+}
+
+function playSound(type, subtype) {
+  if (!G.audioCtx) return;
+  const ctx = G.audioCtx;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+
+  switch(type) {
+    case 'place':
+      osc.frequency.setValueAtTime(440,now);
+      osc.frequency.linearRampToValueAtTime(660,now+0.08);
+      gain.gain.setValueAtTime(0.15,now);
+      gain.gain.linearRampToValueAtTime(0,now+0.12);
+      osc.start(now); osc.stop(now+0.12);
+      break;
+    case 'deny':
+      osc.type='square';
+      osc.frequency.setValueAtTime(120,now);
+      gain.gain.setValueAtTime(0.1,now);
+      gain.gain.linearRampToValueAtTime(0,now+0.15);
+      osc.start(now); osc.stop(now+0.15);
+      break;
+    case 'fire':
+      osc.type = subtype==='cannon' ? 'sawtooth' : 'square';
+      osc.frequency.setValueAtTime(subtype==='cannon'?80:600,now);
+      osc.frequency.linearRampToValueAtTime(subtype==='cannon'?40:200,now+0.12);
+      gain.gain.setValueAtTime(subtype==='cannon'?0.2:0.08,now);
+      gain.gain.linearRampToValueAtTime(0,now+0.12);
+      osc.start(now); osc.stop(now+0.12);
+      break;
+    case 'kill':
+      osc.type='sine';
+      osc.frequency.setValueAtTime(220,now);
+      osc.frequency.linearRampToValueAtTime(110,now+0.1);
+      gain.gain.setValueAtTime(0.1,now);
+      gain.gain.linearRampToValueAtTime(0,now+0.1);
+      osc.start(now); osc.stop(now+0.1);
+      break;
+    case 'hit':
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(60,now);
+      gain.gain.setValueAtTime(0.2,now);
+      gain.gain.linearRampToValueAtTime(0,now+0.2);
+      osc.start(now); osc.stop(now+0.2);
+      break;
+    case 'wave':
+      osc.type='sine';
+      [0,0.1,0.2].forEach(t => {
+        const o2=ctx.createOscillator(), g2=ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.frequency.value=220+t*110;
+        g2.gain.setValueAtTime(0.15,now+t);
+        g2.gain.linearRampToValueAtTime(0,now+t+0.2);
+        o2.start(now+t); o2.stop(now+t+0.2);
+      });
+      osc.start(now); osc.stop(now+0.01);
+      break;
+    case 'waveClear':
+      [0,0.15,0.3,0.45].forEach((t,i) => {
+        const o2=ctx.createOscillator(), g2=ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.frequency.value=[330,440,550,660][i];
+        g2.gain.setValueAtTime(0.15,now+t);
+        g2.gain.linearRampToValueAtTime(0,now+t+0.25);
+        o2.start(now+t); o2.stop(now+t+0.25);
+      });
+      osc.start(now); osc.stop(now+0.01);
+      break;
+    case 'gameOver':
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(440,now);
+      osc.frequency.linearRampToValueAtTime(55,now+1.2);
+      gain.gain.setValueAtTime(0.2,now);
+      gain.gain.linearRampToValueAtTime(0,now+1.2);
+      osc.start(now); osc.stop(now+1.2);
+      break;
+    default:
+      osc.start(now); osc.stop(now+0.01);
+  }
+}
+</script>
+</body>
+</html>
