@@ -3,1146 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IRON FRONTIER — VR Tower Defense</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
+<title>IRON FRONTIER — Tower Defense</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#0a0500; font-family:'Courier New',monospace; overflow:hidden; }
-
-  #hud {
-    position:fixed; top:0; left:0; right:0; z-index:100;
-    display:flex; justify-content:space-between; align-items:flex-start;
-    padding:14px 20px; pointer-events:none;
-    background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);
-  }
-
-  .hud-block { pointer-events:auto; }
-
-  .hud-label { font-size:9px; letter-spacing:3px; color:#7a5522; margin-bottom:2px; }
-  .hud-value { font-size:22px; color:#c9a84c; letter-spacing:2px; text-shadow:0 0 10px rgba(201,168,76,0.5); }
-
-  #wave-banner {
-    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    z-index:200; text-align:center; pointer-events:none;
-    transition:opacity 0.5s;
-  }
-
-  #wave-title {
-    font-size:48px; color:#c0431a; letter-spacing:8px;
-    text-shadow:0 0 30px rgba(192,67,26,0.8);
-    animation:wavePulse 0.5s ease infinite alternate;
-  }
-
-  #wave-sub { font-size:13px; letter-spacing:5px; color:#c9a84c; margin-top:8px; }
-
-  @keyframes wavePulse { from{transform:scale(1)} to{transform:scale(1.04)} }
-
-  #tower-menu {
-    position:fixed; bottom:0; left:0; right:0;
-    display:flex; justify-content:center; gap:10px;
-    padding:14px 20px 18px;
-    background:linear-gradient(to top,rgba(0,0,0,0.85),transparent);
-    z-index:100;
-  }
-
-  .tower-btn {
-    background:rgba(10,5,0,0.9);
-    border:1px solid #3a2800;
-    color:#c9a84c;
-    padding:10px 16px;
-    font-family:'Courier New',monospace;
-    font-size:11px;
-    letter-spacing:2px;
-    cursor:pointer;
-    transition:all 0.2s;
-    text-align:center;
-    min-width:90px;
-  }
-
-  .tower-btn:hover, .tower-btn.selected {
-    border-color:#c9a84c;
-    background:rgba(201,168,76,0.1);
-    color:#fff;
-  }
-
-  .tower-btn .t-cost { font-size:9px; color:#7a5522; margin-top:3px; }
-  .tower-btn .t-icon { font-size:18px; margin-bottom:3px; }
-
-  #game-over {
-    position:fixed; inset:0; z-index:300;
-    background:rgba(0,0,0,0.85);
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    display:none;
-  }
-
-  #game-over h1 { font-size:64px; color:#c0431a; letter-spacing:8px; text-shadow:0 0 40px rgba(192,67,26,0.8); }
-  #game-over p { color:#c9a84c; letter-spacing:4px; margin:16px 0 32px; font-size:13px; }
-  #restart-btn {
-    padding:14px 40px; background:transparent;
-    border:1px solid #c9a84c; color:#c9a84c;
-    font-family:'Courier New',monospace; font-size:13px;
-    letter-spacing:4px; cursor:pointer;
-    transition:all 0.2s;
-  }
-  #restart-btn:hover { background:rgba(201,168,76,0.15); }
-
-  #instructions {
-    position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
-    z-index:100; text-align:center; pointer-events:none;
-    font-size:10px; letter-spacing:3px; color:#5a3a18;
-    background:rgba(0,0,0,0.5); padding:6px 14px;
-  }
-
-  .hidden { opacity:0!important; pointer-events:none!important; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0500;overflow:hidden;font-family:'Courier New',monospace;}
+canvas{display:block;}
+#overlay{position:fixed;inset:0;background:#0a0500;color:#c9a84c;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+#overlay h1{font-size:52px;letter-spacing:10px;text-shadow:0 0 30px rgba(201,168,76,0.5);margin-bottom:8px;}
+.sub{font-size:11px;letter-spacing:5px;color:#7a5522;margin-bottom:6px;}
+.inst{font-size:10px;letter-spacing:3px;color:#5a3a18;margin:3px 0;}
+.start{margin-top:28px;padding:14px 44px;background:transparent;border:1px solid #c9a84c;color:#c9a84c;font-family:'Courier New',monospace;font-size:13px;letter-spacing:4px;cursor:pointer;}
+.start:hover{background:rgba(201,168,76,0.1);}
+#hud{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;padding:12px 20px;background:linear-gradient(to bottom,rgba(0,0,0,0.75),transparent);pointer-events:none;}
+.hb{pointer-events:auto;}.hl{font-size:9px;letter-spacing:3px;color:#7a5522;margin-bottom:2px;}
+.hv{font-size:22px;color:#c9a84c;letter-spacing:2px;}
+#tmenu{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;justify-content:center;gap:8px;padding:12px 16px 16px;background:linear-gradient(to top,rgba(0,0,0,0.85),transparent);}
+.tb{background:rgba(8,4,0,0.92);border:1px solid #3a2800;color:#c9a84c;padding:9px 14px;font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;text-align:center;min-width:82px;transition:all 0.15s;}
+.tb:hover,.tb.sel{border-color:#c9a84c;background:rgba(201,168,76,0.1);color:#fff;}
+.ti{font-size:16px;margin-bottom:2px;}.tc{font-size:8px;color:#7a5522;margin-top:2px;}
+#banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;text-align:center;pointer-events:none;transition:opacity 0.4s;opacity:0;}
+#btitle{font-size:46px;color:#c0431a;letter-spacing:8px;text-shadow:0 0 30px rgba(192,67,26,0.8);}
+#bsub{font-size:12px;letter-spacing:4px;color:#c9a84c;margin-top:8px;}
+#gameover{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.88);display:none;flex-direction:column;align-items:center;justify-content:center;}
+#gameover h1{font-size:56px;color:#c0431a;letter-spacing:8px;}
+#gameover p{color:#c9a84c;letter-spacing:4px;margin:14px 0 28px;font-size:12px;}
+#rb{padding:14px 40px;background:transparent;border:1px solid #c9a84c;color:#c9a84c;font-family:'Courier New',monospace;font-size:12px;letter-spacing:4px;cursor:pointer;}
+#rb:hover{background:rgba(201,168,76,0.12);}
+#xhair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:50;}
+#xhair::before,#xhair::after{content:'';position:absolute;background:#c9a84c88;}
+#xhair::before{width:14px;height:1px;top:0;left:-7px;}
+#xhair::after{width:1px;height:14px;top:-7px;left:0;}
 </style>
 </head>
 <body>
-
-<!-- HUD -->
+<div id="overlay">
+  <h1>IRON FRONTIER</h1>
+  <div class="sub">1878 · THE LAST OUTPOST</div>
+  <div class="inst" style="margin-top:14px">WASD = MOVE &nbsp;·&nbsp; MOUSE = LOOK</div>
+  <div class="inst">SELECT TOWER BELOW &nbsp;·&nbsp; CLICK GROUND TO PLACE</div>
+  <div class="inst">1 / 2 / 3 / 4 = TOWER HOTKEYS</div>
+  <button class="start" id="startBtn">&#9654; ENTER FRONTIER</button>
+</div>
+<div id="xhair"></div>
 <div id="hud">
-  <div class="hud-block">
-    <div class="hud-label">GOLD</div>
-    <div class="hud-value" id="gold-display">150</div>
-  </div>
-  <div class="hud-block" style="text-align:center">
-    <div class="hud-label">WAVE</div>
-    <div class="hud-value" id="wave-display">0</div>
-  </div>
-  <div class="hud-block" style="text-align:right">
-    <div class="hud-label">LIVES</div>
-    <div class="hud-value" id="lives-display">♥♥♥♥♥</div>
-  </div>
+  <div class="hb"><div class="hl">GOLD</div><div class="hv" id="gv">150</div></div>
+  <div class="hb" style="text-align:center"><div class="hl">WAVE</div><div class="hv" id="wv">0</div></div>
+  <div class="hb" style="text-align:right"><div class="hl">LIVES</div><div class="hv" id="lv">&#9829;&#9829;&#9829;&#9829;&#9829;</div></div>
 </div>
-
-<!-- Wave Banner -->
-<div id="wave-banner" class="hidden">
-  <div id="wave-title">WAVE 1</div>
-  <div id="wave-sub">RAIDERS INCOMING FROM THE NORTH</div>
+<div id="tmenu">
+  <button class="tb sel" data-type="watchtower" onclick="sel('watchtower',this)"><div class="ti">&#128307;</div>WATCH<br>TOWER<div class="tc">40g RIFLE</div></button>
+  <button class="tb" data-type="cannon" onclick="sel('cannon',this)"><div class="ti">&#128163;</div>CANNON<div class="tc">80g AOE</div></button>
+  <button class="tb" data-type="bonfire" onclick="sel('bonfire',this)"><div class="ti">&#128293;</div>BONFIRE<div class="tc">50g SLOW</div></button>
+  <button class="tb" data-type="tesla" onclick="sel('tesla',this)"><div class="ti">&#9889;</div>TESLA<br>COIL<div class="tc">110g CHAIN</div></button>
 </div>
-
-<!-- Tower Selection Menu -->
-<div id="tower-menu">
-  <button class="tower-btn selected" data-type="watchtower" onclick="selectTower('watchtower',this)">
-    <div class="t-icon">🪵</div>
-    WATCH<br>TOWER
-    <div class="t-cost">40g · RIFLE</div>
-  </button>
-  <button class="tower-btn" data-type="cannon" onclick="selectTower('cannon',this)">
-    <div class="t-icon">💣</div>
-    CANNON
-    <div class="t-cost">80g · AOE</div>
-  </button>
-  <button class="tower-btn" data-type="bonfire" onclick="selectTower('bonfire',this)">
-    <div class="t-icon">🔥</div>
-    BONFIRE
-    <div class="t-cost">50g · SLOW</div>
-  </button>
-  <button class="tower-btn" data-type="tesla" onclick="selectTower('tesla',this)">
-    <div class="t-icon">⚡</div>
-    TESLA<br>COIL
-    <div class="t-cost">110g · CHAIN</div>
-  </button>
-</div>
-
-<div id="instructions">CLICK GROUND TO PLACE TOWER · WASD/LOOK TO MOVE · SELECT TOWER BELOW</div>
-
-<!-- Game Over -->
-<div id="game-over">
-  <h1>FORT FALLEN</h1>
-  <p id="final-score">SURVIVED 0 WAVES</p>
-  <button id="restart-btn" onclick="restartGame()">↺ TRY AGAIN</button>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════ A-FRAME SCENE ═══ -->
-<a-scene
-  vr-mode-ui="enabled:true"
-  renderer="antialias:true; colorManagement:false"
-  background="color:#1a0d08"
-  loading-screen="enabled:false"
-  id="main-scene"
->
-  <a-assets timeout="10000"></a-assets>
-
-  <!-- ── CAMERA RIG ── -->
-  <a-entity id="rig" position="0 0 0">
-    <a-entity
-      id="cam"
-      camera="fov:80; near:0.05"
-      look-controls="pointerLockEnabled:false; magicWindowTrackingEnabled:true"
-      wasd-controls="acceleration:12"
-      position="0 1.65 0"
-    >
-      <!-- Desktop crosshair cursor -->
-      <a-entity
-        cursor="fuse:false; rayOrigin:mouse"
-        raycaster="objects:.placeable,.enemy-hit; far:60; interval:50"
-        geometry="primitive:ring; radiusInner:0.008; radiusOuter:0.013"
-        material="color:#c9a84c; shader:flat; opacity:0.9"
-        position="0 0 -1"
-      ></a-entity>
-    </a-entity>
-
-    <!-- VR Controllers -->
-    <a-entity id="left-hand"
-      oculus-touch-controls="hand:left"
-      position="-0.2 -0.3 -0.4"
-    ></a-entity>
-    <a-entity id="right-hand"
-      oculus-touch-controls="hand:right"
-      raycaster="objects:.placeable; far:40; showLine:true; lineColor:#c9a84c; lineOpacity:0.6"
-      position="0.2 -0.3 -0.4"
-    ></a-entity>
-  </a-entity>
-
-  <!-- ── LIGHTING ── -->
-  <a-entity light="type:ambient; color:#886644; intensity:3.0"></a-entity>
-  <!-- Sunset directional - strong -->
-  <a-entity light="type:directional; color:#ff8833; intensity:2.0; castShadow:false"
-    position="-3 2 -5"></a-entity>
-  <!-- Fill light -->
-  <a-entity light="type:directional; color:#6677aa; intensity:1.0"
-    position="2 4 2"></a-entity>
-  <!-- Fort lantern glows -->
-  <a-entity light="type:point; color:#ffcc44; intensity:2.5; distance:12; decay:1" position="0 3.5 0"></a-entity>
-  <a-entity light="type:point; color:#ff8822; intensity:1.5; distance:8; decay:1" position="-6 2 0"></a-entity>
-  <a-entity light="type:point; color:#ff8822; intensity:1.5; distance:8; decay:1" position="6 2 0"></a-entity>
-
-  <!-- ── TERRAIN ── -->
-  <!-- Vast dusty ground plane -->
-  <a-plane id="ground-plane" class="placeable"
-    rotation="-90 0 0" width="120" height="120"
-    material="color:#4a2a10; roughness:1; metalness:0"
-    position="0 0 0"
-  ></a-plane>
-
-  <!-- Ground variation — darker patches -->
-  <a-plane rotation="-90 0 0" width="30" height="20" position="15 0.01 -25"
-    material="color:#1f0e03; roughness:1; opacity:0.6; transparent:true"></a-plane>
-  <a-plane rotation="-90 0 0" width="20" height="30" position="-20 0.01 20"
-    material="color:#251103; roughness:1; opacity:0.5; transparent:true"></a-plane>
-  <a-plane rotation="-90 0 0" width="40" height="15" position="-10 0.01 -15"
-    material="color:#220f02; roughness:1; opacity:0.4; transparent:true"></a-plane>
-
-  <!-- ── SKY ── -->
-  <a-sky color="#0d0508"></a-sky>
-
-  <!-- Stars -->
-  <a-entity id="stars-container"></a-entity>
-
-  <!-- Sunset glow on horizon -->
-  <a-torus radius="50" radius-tubular="3" segments-radial="4" segments-tubular="32"
-    rotation="90 0 0" position="0 -2 0"
-    material="color:#8b2200; emissive:#5a1500; emissiveIntensity:0.6; opacity:0.15; transparent:true; side:back">
-  </a-torus>
-
-  <!-- Distant mountains (silhouettes) -->
-  <a-entity id="mountains"></a-entity>
-
-  <!-- ── FORT STRUCTURE ── -->
-  <!-- Main fort walls (4 sides) -->
-  <!-- North wall -->
-  <a-box width="14" height="3" depth="0.5" position="0 1.5 -7"
-    material="color:#4a2d0a; roughness:0.9; metalness:0.05"></a-box>
-  <!-- South wall -->
-  <a-box width="14" height="3" depth="0.5" position="0 1.5 7"
-    material="color:#4a2d0a; roughness:0.9; metalness:0.05"></a-box>
-  <!-- East wall -->
-  <a-box width="0.5" height="3" depth="14" position="7 1.5 0"
-    material="color:#3d2508; roughness:0.9; metalness:0.05"></a-box>
-  <!-- West wall -->
-  <a-box width="0.5" height="3" depth="14" position="-7 1.5 0"
-    material="color:#3d2508; roughness:0.9; metalness:0.05"></a-box>
-
-  <!-- Wall tops / battlements -->
-  <a-box width="14.5" height="0.3" depth="0.7" position="0 3.15 -7"
-    material="color:#5a3810; roughness:0.9"></a-box>
-  <a-box width="14.5" height="0.3" depth="0.7" position="0 3.15 7"
-    material="color:#5a3810; roughness:0.9"></a-box>
-  <a-box width="0.7" height="0.3" depth="14.5" position="7 3.15 0"
-    material="color:#5a3810; roughness:0.9"></a-box>
-  <a-box width="0.7" height="0.3" depth="14.5" position="-7 3.15 0"
-    material="color:#5a3810; roughness:0.9"></a-box>
-
-  <!-- Corner towers -->
-  <a-cylinder radius="1.1" height="4" position="-7 2 -7"
-    material="color:#3d2508; roughness:0.9"></a-cylinder>
-  <a-cylinder radius="1.1" height="4" position="7 2 -7"
-    material="color:#3d2508; roughness:0.9"></a-cylinder>
-  <a-cylinder radius="1.1" height="4" position="-7 2 7"
-    material="color:#3d2508; roughness:0.9"></a-cylinder>
-  <a-cylinder radius="1.1" height="4" position="7 2 7"
-    material="color:#3d2508; roughness:0.9"></a-cylinder>
-
-  <!-- Corner tower caps -->
-  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="-7 4.6 -7"
-    material="color:#2d1a05; roughness:0.9"></a-cone>
-  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="7 4.6 -7"
-    material="color:#2d1a05; roughness:0.9"></a-cone>
-  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="-7 4.6 7"
-    material="color:#2d1a05; roughness:0.9"></a-cone>
-  <a-cone radius-bottom="1.3" radius-top="0.1" height="1.2" position="7 4.6 7"
-    material="color:#2d1a05; roughness:0.9"></a-cone>
-
-  <!-- Command table center -->
-  <a-cylinder radius="0.6" height="0.06" position="0 0.82 0"
-    material="color:#3d2008; roughness:0.8"></a-cylinder>
-  <a-cylinder radius="0.05" height="0.82" position="0 0.41 0"
-    material="color:#2d1505; roughness:0.9"></a-cylinder>
-  <!-- Map on table -->
-  <a-plane width="1.0" height="0.8" rotation="-90 0 0" position="0 0.86 0"
-    material="color:#c8a060; roughness:1; opacity:0.9"></a-plane>
-  <!-- Campfire -->
-  <a-cylinder radius="0.25" height="0.05" position="2 0.025 2"
-    material="color:#2a1505; roughness:1"></a-cylinder>
-  <a-cone radius-bottom="0.2" radius-top="0.01" height="0.4" position="2 0.22 2"
-    material="color:#ff6600; emissive:#cc3300; emissiveIntensity:0.8; opacity:0.85; transparent:true"
-    animation="property:scale; from:1 1 1; to:0.9 1.1 0.9; dur:200; dir:alternate; easing:easeInOutSine; loop:true">
-  </a-cone>
-  <a-entity light="type:point; color:#ff8822; intensity:2; distance:6; decay:2" position="2 0.5 2"
-    animation="property:light.intensity; from:2; to:1.4; dur:180; dir:alternate; easing:easeInOutSine; loop:true">
-  </a-entity>
-
-  <!-- ── TOWER GHOST (placement preview) ── -->
-  <a-entity id="tower-ghost" visible="false">
-    <a-cylinder id="ghost-body" radius="0.35" height="2" position="0 1 0"
-      material="color:#c9a84c; opacity:0.35; transparent:true; wireframe:false"></a-cylinder>
-    <a-circle radius="4" rotation="-90 0 0" position="0 0.02 0"
-      material="color:#c9a84c; opacity:0.12; transparent:true"></a-circle>
-  </a-entity>
-
-  <!-- ── DYNAMIC ENTITIES CONTAINER ── -->
-  <a-entity id="towers-container"></a-entity>
-  <a-entity id="enemies-container"></a-entity>
-  <a-entity id="projectiles-container"></a-entity>
-  <a-entity id="fx-container"></a-entity>
-
-  <!-- Path markers (invisible, used for enemy pathing) -->
-  <!-- Enemies spawn at 4 compass directions and walk to center -->
-
-</a-scene>
-
-<!-- ══════════════════════════════════════════ GAME ENGINE ══════════════════ -->
+<div id="banner"><div id="btitle">WAVE 1</div><div id="bsub">RAIDERS FROM THE NORTH</div></div>
+<div id="gameover"><h1>FORT FALLEN</h1><p id="fs">SURVIVED 0 WAVES</p><button id="rb" onclick="restart()">&#8635; TRY AGAIN</button></div>
 <script>
-'use strict';
-
-// ── STATE ──────────────────────────────────────────────────────────────────
-const G = {
-  gold: 150,
-  lives: 5,
-  wave: 0,
-  score: 0,
-  running: false,
-  waveActive: false,
-  selectedTower: 'watchtower',
-  towers: [],
-  enemies: [],
-  projectiles: [],
-  nextEnemyId: 0,
-  nextTowerId: 0,
-  nextProjId: 0,
-  waveTimer: null,
-  gameLoop: null,
-  audioCtx: null,
-};
-
-// ── TOWER DEFS ─────────────────────────────────────────────────────────────
-const TOWER_DEFS = {
-  watchtower: {
-    name: 'Watchtower', cost: 40, range: 12, damage: 15, fireRate: 1200,
-    color: '#8B6914', emissive: '#5a4410', height: 2.5, radius: 0.3,
-    projColor: '#ffcc44', projSpeed: 20,
-  },
-  cannon: {
-    name: 'Cannon', cost: 80, range: 9, damage: 45, fireRate: 2800, aoe: 2.5,
-    color: '#555555', emissive: '#222222', height: 1.8, radius: 0.45,
-    projColor: '#888888', projSpeed: 14,
-  },
-  bonfire: {
-    name: 'Bonfire', cost: 50, range: 6, damage: 8, fireRate: 600, slow: 0.5,
-    color: '#ff6600', emissive: '#cc3300', height: 1.2, radius: 0.5,
-    projColor: '#ff4400', projSpeed: 18,
-  },
-  tesla: {
-    name: 'Tesla Coil', cost: 110, range: 8, damage: 30, fireRate: 1600, chain: 3,
-    color: '#44aaff', emissive: '#2266cc', height: 3.0, radius: 0.25,
-    projColor: '#88ddff', projSpeed: 25,
-  },
-};
-
-// ── ENEMY DEFS ─────────────────────────────────────────────────────────────
-const ENEMY_DEFS = {
-  raider:    { hp: 60,  speed: 3.5, reward: 10, color: '#882200', scale: 1.0 },
-  horseman:  { hp: 40,  speed: 6.0, reward: 15, color: '#553311', scale: 0.85 },
-  dynamiter: { hp: 80,  speed: 2.5, reward: 18, color: '#664400', scale: 1.1 },
-  armored:   { hp: 220, speed: 1.8, reward: 35, color: '#444444', scale: 1.3 },
-  boss:      { hp: 600, speed: 1.5, reward: 80, color: '#1a0000', scale: 2.0 },
-};
-
-// Spawn directions — 4 compass points far out
-const SPAWN_POINTS = [
-  {x:0,  z:-50}, // North
-  {x:50, z:0},   // East
-  {x:0,  z:50},  // South
-  {x:-50,z:0},   // West
-];
-
-// ── ELEMENT REFS ──────────────────────────────────────────────────────────
-const goldDisplay  = document.getElementById('gold-display');
-const waveDisplay  = document.getElementById('wave-display');
-const livesDisplay = document.getElementById('lives-display');
-const waveBanner   = document.getElementById('wave-banner');
-const waveTitle    = document.getElementById('wave-title');
-const waveSub      = document.getElementById('wave-sub');
-const towerGhost   = document.getElementById('tower-ghost');
-const ghostBody    = document.getElementById('ghost-body');
-
-// ── INIT ───────────────────────────────────────────────────────────────────
-document.querySelector('a-scene').addEventListener('loaded', () => {
-  buildEnvironment();
-  setupInput();
-  initAudio();
-  startGame();
-});
-
-function startGame() {
-  G.gold = 150; G.lives = 5; G.wave = 0;
-  G.towers = []; G.enemies = []; G.projectiles = [];
-  G.running = true;
-  updateHUD();
-  document.getElementById('game-over').style.display = 'none';
-  if (G.gameLoop) clearInterval(G.gameLoop);
-  G.gameLoop = setInterval(tick, 50); // 20 fps logic
-  setTimeout(startNextWave, 3000);
-}
-
-// ── ENVIRONMENT ───────────────────────────────────────────────────────────
-function buildEnvironment() {
-  const scene = document.querySelector('a-scene');
-
-  // Stars
-  const starContainer = document.getElementById('stars-container');
-  for (let i = 0; i < 200; i++) {
-    const s = document.createElement('a-sphere');
-    const theta = Math.random() * Math.PI * 2;
-    const phi   = Math.random() * Math.PI * 0.4;
-    const r     = 90;
-    s.setAttribute('radius', (Math.random() * 0.12 + 0.04).toFixed(2));
-    s.setAttribute('position', `${(r*Math.sin(phi)*Math.cos(theta)).toFixed(1)} ${(r*Math.cos(phi)+5).toFixed(1)} ${(r*Math.sin(phi)*Math.sin(theta)).toFixed(1)}`);
-    s.setAttribute('material', `color:#ffffff; emissive:#ffffff; emissiveIntensity:${(Math.random()*0.8+0.2).toFixed(2)}; shader:flat`);
-    s.setAttribute('segments-width', '4');
-    s.setAttribute('segments-height', '4');
-    starContainer.appendChild(s);
-  }
-
-  // Mountains (distant silhouettes)
-  const mtnContainer = document.getElementById('mountains');
-  const mtnPositions = [
-    {x:-40,z:-55,w:18,h:12}, {x:-20,z:-58,w:22,h:16}, {x:5,z:-60,w:28,h:14},
-    {x:30,z:-57,w:20,h:18}, {x:50,z:-52,w:16,h:10},
-    {x:-55,z:-20,w:14,h:12}, {x:-58,z:10,w:16,h:10},
-    {x:55,z:-15,w:14,h:14}, {x:58,z:15,w:18,h:11},
-    {x:-30,z:55,w:20,h:12}, {x:10,z:58,w:24,h:14}, {x:40,z:54,w:18,h:10},
-  ];
-  mtnPositions.forEach(m => {
-    const cone = document.createElement('a-cone');
-    cone.setAttribute('radius-bottom', (m.w/2).toFixed(1));
-    cone.setAttribute('radius-top', '0.5');
-    cone.setAttribute('height', m.h);
-    cone.setAttribute('position', `${m.x} ${m.h/2-1} ${m.z}`);
-    cone.setAttribute('material', 'color:#1a0a03; roughness:1');
-    cone.setAttribute('segments-radial', '6');
-    mtnContainer.appendChild(cone);
-  });
-
-  // Rocks scattered around
-  const rockPositions = [
-    [15,0,-20],[−18,0,22],[-12,0,-30],[22,0,18],[-25,0,8],
-    [30,0,-10],[8,0,35],[-35,0,-15],[20,0,28],[-8,0,-35]
-  ];
-  rockPositions.forEach(([x,y,z]) => {
-    const r = document.createElement('a-sphere');
-    const sz = (Math.random()*0.6+0.2).toFixed(2);
-    r.setAttribute('radius', sz);
-    r.setAttribute('position', `${x} 0.1 ${z}`);
-    r.setAttribute('scale', `1 ${(Math.random()*0.5+0.5).toFixed(2)} 1`);
-    r.setAttribute('material', 'color:#3a1f08; roughness:1');
-    r.setAttribute('segments-width', '5');
-    r.setAttribute('segments-height', '4');
-    scene.appendChild(r);
-  });
-
-  // Fence posts along path approaches
-  for (let i = 0; i < 6; i++) {
-    const post = document.createElement('a-box');
-    post.setAttribute('width','0.1');
-    post.setAttribute('height','1.2');
-    post.setAttribute('depth','0.1');
-    post.setAttribute('position', `${-3 + i*1.1} 0.6 -8`);
-    post.setAttribute('material', 'color:#3d2008; roughness:0.9');
-    scene.appendChild(post);
-  }
-
-  // Dust clouds (static, atmospheric)
-  for (let i = 0; i < 8; i++) {
-    const dust = document.createElement('a-sphere');
-    const angle = (i/8) * Math.PI * 2;
-    const r = 20 + Math.random()*10;
-    dust.setAttribute('radius', (3 + Math.random()*4).toFixed(1));
-    dust.setAttribute('position', `${(Math.cos(angle)*r).toFixed(1)} 0.5 ${(Math.sin(angle)*r).toFixed(1)}`);
-    dust.setAttribute('material', `color:#8B4513; opacity:${(0.04+Math.random()*0.06).toFixed(2)}; transparent:true`);
-    dust.setAttribute('segments-width','6');
-    dust.setAttribute('segments-height','4');
-    scene.appendChild(dust);
-  }
-}
-
-// ── INPUT ──────────────────────────────────────────────────────────────────
-function setupInput() {
-  const ground = document.querySelector('#ground-plane');
-
-  // Desktop: click to place
-  ground.addEventListener('click', (e) => {
-    if (!G.running) return;
-    const intersection = e.detail.intersection;
-    if (!intersection) return;
-    const p = intersection.point;
-    // Don't place inside fort
-    if (Math.abs(p.x) < 8 && Math.abs(p.z) < 8) return;
-    tryPlaceTower(p.x, p.z);
-  });
-
-  // Mouse move: show ghost
-  ground.addEventListener('mousemove', (e) => {
-    if (!G.running) return;
-    const intersection = e.detail.intersection;
-    if (!intersection) { towerGhost.setAttribute('visible','false'); return; }
-    const p = intersection.point;
-    if (Math.abs(p.x) < 8 && Math.abs(p.z) < 8) { towerGhost.setAttribute('visible','false'); return; }
-    towerGhost.setAttribute('visible','true');
-    towerGhost.setAttribute('position', `${p.x.toFixed(2)} 0 ${p.z.toFixed(2)}`);
-    const def = TOWER_DEFS[G.selectedTower];
-    // Range ring
-    const ring = towerGhost.querySelector('a-circle');
-    ring.setAttribute('radius', def.range);
-    ring.setAttribute('material', `color:${def.color}; opacity:0.12; transparent:true`);
-    ghostBody.setAttribute('material', `color:${def.color}; opacity:0.4; transparent:true`);
-    ghostBody.setAttribute('height', def.height);
-    ghostBody.setAttribute('position', `0 ${def.height/2} 0`);
-  });
-
-  // VR right controller trigger
-  document.getElementById('right-hand').addEventListener('triggerdown', () => {
-    const raycaster = document.getElementById('right-hand').components.raycaster;
-    if (!raycaster) return;
-    const ints = raycaster.intersectedEls;
-    if (!ints.length) return;
-    const p = raycaster.getIntersection(ints[0]);
-    if (p) tryPlaceTower(p.point.x, p.point.z);
-  });
-
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    const keys = {'1':'watchtower','2':'cannon','3':'bonfire','4':'tesla'};
-    if (keys[e.key]) {
-      selectTower(keys[e.key], document.querySelector(`[data-type="${keys[e.key]}"]`));
-    }
-  });
-}
-
-function selectTower(type, btn) {
-  G.selectedTower = type;
-  document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-  if (btn) btn.classList.add('selected');
-}
-
-// ── TOWER PLACEMENT ────────────────────────────────────────────────────────
-function tryPlaceTower(x, z) {
-  const def = TOWER_DEFS[G.selectedTower];
-  if (G.gold < def.cost) { playSound('deny'); return; }
-
-  // Check not overlapping existing tower
-  for (const t of G.towers) {
-    const dx = t.x - x, dz = t.z - z;
-    if (Math.sqrt(dx*dx+dz*dz) < 1.5) { playSound('deny'); return; }
-  }
-
-  G.gold -= def.cost;
-  updateHUD();
-  playSound('place');
-
-  const id = G.nextTowerId++;
-  const tower = {
-    id, type: G.selectedTower, x, z,
-    def, lastFired: 0, target: null,
-    el: buildTowerEntity(G.selectedTower, x, z, def, id),
-  };
-  G.towers.push(tower);
-}
-
-function buildTowerEntity(type, x, z, def, id) {
-  const scene = document.querySelector('a-scene');
-  const container = document.getElementById('towers-container');
-  const el = document.createElement('a-entity');
-  el.setAttribute('id', `tower-${id}`);
-  el.setAttribute('position', `${x.toFixed(2)} 0 ${z.toFixed(2)}`);
-
-  // Base platform
-  const base = document.createElement('a-cylinder');
-  base.setAttribute('radius', (def.radius+0.15).toFixed(2));
-  base.setAttribute('height', '0.15');
-  base.setAttribute('position', `0 0.07 0`);
-  base.setAttribute('material', `color:#2d1505; roughness:0.9`);
-  el.appendChild(base);
-
-  // Main body
-  const body = document.createElement('a-cylinder');
-  body.setAttribute('radius', def.radius.toFixed(2));
-  body.setAttribute('height', def.height.toFixed(2));
-  body.setAttribute('position', `0 ${def.height/2} 0`);
-  body.setAttribute('material', `color:${def.color}; emissive:${def.emissive}; emissiveIntensity:0.3; roughness:0.7`);
-  el.appendChild(body);
-
-  // Type-specific decorations
-  if (type === 'watchtower') {
-    const top = document.createElement('a-box');
-    top.setAttribute('width','0.8'); top.setAttribute('height','0.5'); top.setAttribute('depth','0.8');
-    top.setAttribute('position',`0 ${def.height+0.25} 0`);
-    top.setAttribute('material',`color:#6b4010; roughness:0.9`);
-    el.appendChild(top);
-    // Rifle barrel
-    const barrel = document.createElement('a-cylinder');
-    barrel.setAttribute('radius','0.04'); barrel.setAttribute('height','0.8');
-    barrel.setAttribute('rotation','90 0 0');
-    barrel.setAttribute('position',`0 ${def.height+0.3} -0.5`);
-    barrel.setAttribute('material',`color:#444; metalness:0.8`);
-    el.appendChild(barrel);
-  } else if (type === 'cannon') {
-    const barrel = document.createElement('a-cylinder');
-    barrel.setAttribute('radius','0.12'); barrel.setAttribute('height','0.9');
-    barrel.setAttribute('rotation','90 0 0');
-    barrel.setAttribute('position',`0 ${def.height-0.2} -0.5`);
-    barrel.setAttribute('material',`color:#333; metalness:0.9; roughness:0.2`);
-    el.appendChild(barrel);
-    const wheel = document.createElement('a-torus');
-    wheel.setAttribute('radius','0.35'); wheel.setAttribute('radius-tubular','0.05');
-    wheel.setAttribute('rotation','0 90 0'); wheel.setAttribute('position',`0 0.6 0`);
-    wheel.setAttribute('material',`color:#4a2800; roughness:0.9`);
-    el.appendChild(wheel);
-  } else if (type === 'bonfire') {
-    const flame = document.createElement('a-cone');
-    flame.setAttribute('radius-bottom','0.3'); flame.setAttribute('radius-top','0.02');
-    flame.setAttribute('height','0.8'); flame.setAttribute('position',`0 ${def.height+0.4} 0`);
-    flame.setAttribute('material',`color:#ff6600; emissive:#cc3300; emissiveIntensity:1; opacity:0.9; transparent:true`);
-    flame.setAttribute('animation',`property:scale; from:1 1 1; to:0.85 1.15 0.85; dur:250; dir:alternate; easing:easeInOutSine; loop:true`);
-    el.appendChild(flame);
-    const light = document.createElement('a-entity');
-    light.setAttribute('light',`type:point; color:#ff8822; intensity:1.5; distance:${def.range}; decay:2`);
-    light.setAttribute('position',`0 ${def.height+0.5} 0`);
-    el.appendChild(light);
-  } else if (type === 'tesla') {
-    // Tall coil with glowing top
-    const coilTop = document.createElement('a-torus');
-    coilTop.setAttribute('radius','0.4'); coilTop.setAttribute('radius-tubular','0.06');
-    coilTop.setAttribute('position',`0 ${def.height+0.1} 0`);
-    coilTop.setAttribute('material',`color:#44aaff; emissive:#2266ff; emissiveIntensity:0.8`);
-    coilTop.setAttribute('animation',`property:rotation; from:0 0 0; to:0 360 0; dur:2000; easing:linear; loop:true`);
-    el.appendChild(coilTop);
-    const glow = document.createElement('a-entity');
-    glow.setAttribute('light',`type:point; color:#44aaff; intensity:1; distance:${def.range}; decay:2`);
-    glow.setAttribute('position',`0 ${def.height} 0`);
-    el.appendChild(glow);
-  }
-
-  // Range ring (always visible, subtle)
-  const ring = document.createElement('a-torus');
-  ring.setAttribute('radius', def.range.toFixed(1));
-  ring.setAttribute('radius-tubular','0.04');
-  ring.setAttribute('rotation','-90 0 0');
-  ring.setAttribute('position','0 0.05 0');
-  ring.setAttribute('material',`color:${def.color}; opacity:0.15; transparent:true`);
-  el.appendChild(ring);
-
-  container.appendChild(el);
-  return el;
-}
-
-// ── WAVE SYSTEM ────────────────────────────────────────────────────────────
-function startNextWave() {
-  if (!G.running) return;
-  G.wave++;
-  waveDisplay.textContent = G.wave;
-
-  const directions = ['NORTH','EAST','SOUTH','WEST'];
-  const dir = directions[Math.floor(Math.random()*4)];
-  waveTitle.textContent = `WAVE ${G.wave}`;
-  waveSub.textContent = `RAIDERS INCOMING FROM THE ${dir}`;
-  waveBanner.classList.remove('hidden');
-  playSound('wave');
-
-  setTimeout(() => {
-    waveBanner.classList.add('hidden');
-    spawnWave(G.wave);
-  }, 2500);
-}
-
-function spawnWave(waveNum) {
-  G.waveActive = true;
-  const count = 5 + waveNum * 2;
-  let spawned = 0;
-
-  const types = getWaveComposition(waveNum);
-  const spawnDir = Math.floor(Math.random() * 4);
-  const sp = SPAWN_POINTS[spawnDir];
-
-  const interval = setInterval(() => {
-    if (!G.running) { clearInterval(interval); return; }
-    if (spawned >= count) { clearInterval(interval); return; }
-
-    const type = types[Math.floor(Math.random() * types.length)];
-    const jitter = () => (Math.random()-0.5)*12;
-    spawnEnemy(type, sp.x + jitter(), sp.z + jitter());
-    spawned++;
-  }, 600 + Math.max(0, 400 - waveNum*20));
-}
-
-function getWaveComposition(wave) {
-  if (wave <= 2) return ['raider'];
-  if (wave <= 4) return ['raider','raider','horseman'];
-  if (wave <= 6) return ['raider','horseman','dynamiter'];
-  if (wave <= 9) return ['horseman','dynamiter','armored'];
-  return ['dynamiter','armored','boss'];
-}
-
-function spawnEnemy(type, x, z) {
-  const def = {...ENEMY_DEFS[type]};
-  const id = G.nextEnemyId++;
-  const el = buildEnemyEntity(type, x, z, def, id);
-
-  const enemy = { id, type, x, z, hp: def.hp, maxHp: def.hp, speed: def.speed, reward: def.reward, def, el, slowed: 0 };
-  G.enemies.push(enemy);
-}
-
-function buildEnemyEntity(type, x, z, def, id) {
-  const container = document.getElementById('enemies-container');
-  const el = document.createElement('a-entity');
-  el.setAttribute('id', `enemy-${id}`);
-  el.setAttribute('class', 'enemy-hit');
-  el.setAttribute('position', `${x.toFixed(2)} 0 ${z.toFixed(2)}`);
-
-  const sc = def.scale;
-
-  // Body
-  const body = document.createElement('a-box');
-  body.setAttribute('width', (0.5*sc).toFixed(2));
-  body.setAttribute('height', (1.0*sc).toFixed(2));
-  body.setAttribute('depth', (0.4*sc).toFixed(2));
-  body.setAttribute('position', `0 ${0.5*sc} 0`);
-  body.setAttribute('material', `color:${def.color}; roughness:0.8`);
-  el.appendChild(body);
-
-  // Head
-  const head = document.createElement('a-sphere');
-  head.setAttribute('radius', (0.2*sc).toFixed(2));
-  head.setAttribute('position', `0 ${1.15*sc} 0`);
-  head.setAttribute('material', `color:${def.color}; roughness:0.8`);
-  el.appendChild(head);
-
-  // Hat (cowboy)
-  if (type !== 'boss') {
-    const hat = document.createElement('a-cylinder');
-    hat.setAttribute('radius', (0.22*sc).toFixed(2));
-    hat.setAttribute('height', (0.25*sc).toFixed(2));
-    hat.setAttribute('position', `0 ${1.4*sc} 0`);
-    hat.setAttribute('material', `color:#1a0f00; roughness:1`);
-    el.appendChild(hat);
-    const brim = document.createElement('a-cylinder');
-    brim.setAttribute('radius', (0.35*sc).toFixed(2));
-    brim.setAttribute('height', (0.04*sc).toFixed(2));
-    brim.setAttribute('position', `0 ${1.28*sc} 0`);
-    brim.setAttribute('material', `color:#1a0f00; roughness:1`);
-    el.appendChild(brim);
-  } else {
-    // Boss gets horns
-    const h1 = document.createElement('a-cone');
-    h1.setAttribute('radius-bottom','0.08'); h1.setAttribute('radius-top','0.01'); h1.setAttribute('height','0.4');
-    h1.setAttribute('position',`-0.15 ${1.5*sc} 0`); h1.setAttribute('rotation','0 0 -20');
-    h1.setAttribute('material','color:#cc0000; emissive:#660000; emissiveIntensity:0.5');
-    el.appendChild(h1);
-    const h2 = h1.cloneNode();
-    h2.setAttribute('position',`0.15 ${1.5*sc} 0`); h2.setAttribute('rotation','0 0 20');
-    el.appendChild(h2);
-  }
-
-  // HP bar background
-  const hpBg = document.createElement('a-plane');
-  hpBg.setAttribute('class','hp-bg');
-  hpBg.setAttribute('width','0.6'); hpBg.setAttribute('height','0.07');
-  hpBg.setAttribute('position',`0 ${(1.6*sc+0.1)} 0`);
-  hpBg.setAttribute('material','color:#330000; opacity:0.8; transparent:true; shader:flat');
-  hpBg.setAttribute('look-at','#cam');
-  el.appendChild(hpBg);
-
-  // HP bar fill
-  const hpBar = document.createElement('a-plane');
-  hpBar.setAttribute('class','hp-fill');
-  hpBar.setAttribute('width','0.6'); hpBar.setAttribute('height','0.065');
-  hpBar.setAttribute('position',`0 ${(1.6*sc+0.1)} 0.001`);
-  hpBar.setAttribute('material','color:#cc2200; opacity:0.9; transparent:true; shader:flat');
-  hpBar.setAttribute('look-at','#cam');
-  el.appendChild(hpBar);
-
-  // Walk animation (bobbing)
-  el.setAttribute('animation__bob', `property:position; from:${x.toFixed(2)} 0 ${z.toFixed(2)}; to:${x.toFixed(2)} 0.08 ${z.toFixed(2)}; dur:300; dir:alternate; easing:easeInOutSine; loop:true`);
-
-  container.appendChild(el);
-  return el;
-}
-
-// ── GAME TICK ──────────────────────────────────────────────────────────────
-function tick() {
-  if (!G.running) return;
-  const now = Date.now();
-  const dt = 0.05; // 50ms
-
-  // Move enemies
-  const toRemove = [];
-  for (const enemy of G.enemies) {
-    if (enemy.hp <= 0) { toRemove.push(enemy); continue; }
-
-    const speed = enemy.slowed > 0 ? enemy.speed * 0.5 : enemy.speed;
-    if (enemy.slowed > 0) enemy.slowed -= dt;
-
-    // Move toward center
-    const dx = -enemy.x, dz = -enemy.z;
-    const dist = Math.sqrt(dx*dx+dz*dz);
-
-    if (dist < 2.5) {
-      // Reached fort
-      enemy.hp = 0;
-      G.lives--;
-      playSound('hit');
-      updateHUD();
-      if (G.lives <= 0) { gameOver(); return; }
-      toRemove.push(enemy);
-      continue;
-    }
-
-    const nx = dx/dist, nz = dz/dist;
-    enemy.x += nx * speed * dt;
-    enemy.z += nz * speed * dt;
-
-    if (enemy.el && enemy.el.parentNode) {
-      enemy.el.setAttribute('position', `${enemy.x.toFixed(3)} 0 ${enemy.z.toFixed(3)}`);
-      // Face direction of travel
-      const angle = Math.atan2(nx, nz) * 180 / Math.PI;
-      enemy.el.setAttribute('rotation', `0 ${angle.toFixed(1)} 0`);
-    }
-  }
-
-  // Remove dead/arrived enemies
-  for (const e of toRemove) removeEnemy(e);
-
-  // Tower fire
-  for (const tower of G.towers) {
-    if (now - tower.lastFired < tower.def.fireRate) continue;
-
-    // Find target in range
-    let closest = null, closestDist = Infinity;
-    for (const enemy of G.enemies) {
-      if (enemy.hp <= 0) continue;
-      const dx = enemy.x - tower.x, dz = enemy.z - tower.z;
-      const d = Math.sqrt(dx*dx+dz*dz);
-      if (d < tower.def.range && d < closestDist) {
-        closestDist = d; closest = enemy;
-      }
-    }
-
-    if (closest) {
-      tower.lastFired = now;
-      fireProjectile(tower, closest);
-    }
-  }
-
-  // Move projectiles
-  const projRemove = [];
-  for (const proj of G.projectiles) {
-    proj.x += proj.vx * dt;
-    proj.z += proj.vz * dt;
-    proj.life -= dt;
-
-    if (proj.el && proj.el.parentNode) {
-      proj.el.setAttribute('position', `${proj.x.toFixed(3)} ${proj.y.toFixed(3)} ${proj.z.toFixed(3)}`);
-    }
-
-    // Check hit
-    let hit = false;
-    for (const enemy of G.enemies) {
-      if (enemy.hp <= 0) continue;
-      const dx = enemy.x - proj.x, dz = enemy.z - proj.z;
-      if (Math.sqrt(dx*dx+dz*dz) < 0.8) {
-        // Hit!
-        if (proj.aoe) {
-          // AoE damage
-          for (const e2 of G.enemies) {
-            const dx2 = e2.x - proj.x, dz2 = e2.z - proj.z;
-            if (Math.sqrt(dx2*dx2+dz2*dz2) < proj.aoe) {
-              damageEnemy(e2, proj.damage);
-            }
-          }
-          spawnExplosion(proj.x, proj.z);
-        } else if (proj.chain) {
-          // Chain lightning
-          let targets = [enemy];
-          for (const e2 of G.enemies) {
-            if (targets.length >= proj.chain) break;
-            if (e2 === enemy || e2.hp <= 0) continue;
-            const dx2 = e2.x - enemy.x, dz2 = e2.z - enemy.z;
-            if (Math.sqrt(dx2*dx2+dz2*dz2) < 4) targets.push(e2);
-          }
-          targets.forEach(t => damageEnemy(t, proj.damage));
-        } else {
-          damageEnemy(enemy, proj.damage);
-          if (proj.slow) enemy.slowed = 2.0;
-        }
-        hit = true;
-        projRemove.push(proj);
-        break;
-      }
-    }
-    if (!hit && proj.life <= 0) projRemove.push(proj);
-  }
-  for (const p of projRemove) removeProjectile(p);
-
-  // Check wave clear
-  if (G.waveActive && G.enemies.length === 0) {
-    G.waveActive = false;
-    G.gold += 20 + G.wave * 5;
-    updateHUD();
-    playSound('waveClear');
-    setTimeout(startNextWave, 4000);
-  }
-}
-
-function damageEnemy(enemy, dmg) {
-  enemy.hp -= dmg;
-  if (enemy.hp <= 0) {
-    G.gold += enemy.reward;
-    G.score++;
-    updateHUD();
-    playSound('kill');
-    spawnDeathFX(enemy.x, enemy.z);
-  }
-  // Update HP bar
-  if (enemy.el) {
-    const fill = enemy.el.querySelector('.hp-fill');
-    if (fill) {
-      const pct = Math.max(0, enemy.hp / enemy.maxHp);
-      fill.setAttribute('scale', `${pct.toFixed(3)} 1 1`);
-      const col = pct > 0.5 ? '#22cc00' : pct > 0.25 ? '#ffaa00' : '#cc2200';
-      fill.setAttribute('material', `color:${col}; opacity:0.9; transparent:true; shader:flat`);
-    }
-  }
-}
-
-function removeEnemy(enemy) {
-  G.enemies = G.enemies.filter(e => e !== enemy);
-  if (enemy.el && enemy.el.parentNode) enemy.el.parentNode.removeChild(enemy.el);
-}
-
-// ── PROJECTILES ────────────────────────────────────────────────────────────
-function fireProjectile(tower, target) {
-  const def = tower.def;
-  const dx = target.x - tower.x, dz = target.z - tower.z;
-  const dist = Math.sqrt(dx*dx+dz*dz);
-  const nx = dx/dist, nz = dz/dist;
-
-  const id = G.nextProjId++;
-  const el = document.createElement('a-sphere');
-  el.setAttribute('id', `proj-${id}`);
-  el.setAttribute('radius', tower.type === 'cannon' ? '0.18' : '0.09');
-  el.setAttribute('segments-width','5'); el.setAttribute('segments-height','4');
-  el.setAttribute('position', `${tower.x.toFixed(2)} ${def.height-0.3} ${tower.z.toFixed(2)}`);
-  el.setAttribute('material', `color:${def.projColor}; emissive:${def.projColor}; emissiveIntensity:0.8; shader:flat`);
-
-  document.getElementById('projectiles-container').appendChild(el);
-
-  const proj = {
-    id, x: tower.x, z: tower.z, y: def.height - 0.3,
-    vx: nx * def.projSpeed, vz: nz * def.projSpeed,
-    damage: def.damage, life: 3.0, el,
-    aoe: def.aoe || null, chain: def.chain || null, slow: def.slow || null,
-  };
-  G.projectiles.push(proj);
-  playSound('fire', tower.type);
-}
-
-function removeProjectile(proj) {
-  G.projectiles = G.projectiles.filter(p => p !== proj);
-  if (proj.el && proj.el.parentNode) proj.el.parentNode.removeChild(proj.el);
-}
-
-// ── VFX ────────────────────────────────────────────────────────────────────
-function spawnExplosion(x, z) {
-  const el = document.createElement('a-sphere');
-  el.setAttribute('radius','0.1');
-  el.setAttribute('position',`${x.toFixed(2)} 0.5 ${z.toFixed(2)}`);
-  el.setAttribute('material','color:#ff6600; emissive:#ff3300; emissiveIntensity:1; opacity:0.9; transparent:true; shader:flat');
-  el.setAttribute('animation__scale','property:scale; from:1 1 1; to:8 8 8; dur:400; easing:easeOutQuad');
-  el.setAttribute('animation__fade','property:material.opacity; from:0.9; to:0; dur:400; easing:easeOutQuad');
-  document.getElementById('fx-container').appendChild(el);
-  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
-}
-
-function spawnDeathFX(x, z) {
-  for (let i = 0; i < 5; i++) {
-    const p = document.createElement('a-sphere');
-    p.setAttribute('radius','0.08');
-    const vx = (Math.random()-0.5)*3, vz = (Math.random()-0.5)*3;
-    p.setAttribute('position',`${x.toFixed(2)} 0.8 ${z.toFixed(2)}`);
-    p.setAttribute('material','color:#cc4400; emissive:#882200; emissiveIntensity:0.8; shader:flat');
-    p.setAttribute('animation__move',`property:position; from:${x.toFixed(2)} 0.8 ${z.toFixed(2)}; to:${(x+vx).toFixed(2)} 0.1 ${(z+vz).toFixed(2)}; dur:350; easing:easeOutQuad`);
-    p.setAttribute('animation__fade','property:material.opacity; from:1; to:0; dur:350');
-    document.getElementById('fx-container').appendChild(p);
-    setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 400);
-  }
-}
-
-// ── HUD ────────────────────────────────────────────────────────────────────
-function updateHUD() {
-  goldDisplay.textContent = G.gold;
-  waveDisplay.textContent = G.wave;
-  livesDisplay.textContent = '♥'.repeat(Math.max(0,G.lives)) + '♡'.repeat(Math.max(0,5-G.lives));
-}
-
-// ── GAME OVER ──────────────────────────────────────────────────────────────
-function gameOver() {
-  G.running = false;
-  clearInterval(G.gameLoop);
-  document.getElementById('final-score').textContent = `SURVIVED ${G.wave} WAVES · ${G.score} ENEMIES DEFEATED`;
-  document.getElementById('game-over').style.display = 'flex';
-  playSound('gameOver');
-}
-
-function restartGame() {
-  // Clear all entities
-  ['towers-container','enemies-container','projectiles-container','fx-container'].forEach(id => {
-    const c = document.getElementById(id);
-    while (c.firstChild) c.removeChild(c.firstChild);
-  });
-  G.towers=[]; G.enemies=[]; G.projectiles=[];
-  G.nextEnemyId=0; G.nextTowerId=0; G.nextProjId=0;
-  startGame();
-}
-
-// ── AUDIO ──────────────────────────────────────────────────────────────────
-function initAudio() {
-  const start = () => {
-    if (G.audioCtx) return;
-    G.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    playAmbient();
-  };
-  document.addEventListener('click', start, {once:true});
-  document.addEventListener('keydown', start, {once:true});
-}
-
-function playAmbient() {
-  if (!G.audioCtx) return;
-  // Wind howl
-  const buf = G.audioCtx.createBuffer(1, G.audioCtx.sampleRate*2, G.audioCtx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.3;
-  const src = G.audioCtx.createBufferSource();
-  src.buffer = buf; src.loop = true;
-  const filt = G.audioCtx.createBiquadFilter();
-  filt.type='lowpass'; filt.frequency.value=300;
-  const gain = G.audioCtx.createGain();
-  gain.gain.value=0.04;
-  src.connect(filt); filt.connect(gain); gain.connect(G.audioCtx.destination);
-  src.start();
-}
-
-function playSound(type, subtype) {
-  if (!G.audioCtx) return;
-  const ctx = G.audioCtx;
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain); gain.connect(ctx.destination);
-
-  switch(type) {
-    case 'place':
-      osc.frequency.setValueAtTime(440,now);
-      osc.frequency.linearRampToValueAtTime(660,now+0.08);
-      gain.gain.setValueAtTime(0.15,now);
-      gain.gain.linearRampToValueAtTime(0,now+0.12);
-      osc.start(now); osc.stop(now+0.12);
-      break;
-    case 'deny':
-      osc.type='square';
-      osc.frequency.setValueAtTime(120,now);
-      gain.gain.setValueAtTime(0.1,now);
-      gain.gain.linearRampToValueAtTime(0,now+0.15);
-      osc.start(now); osc.stop(now+0.15);
-      break;
-    case 'fire':
-      osc.type = subtype==='cannon' ? 'sawtooth' : 'square';
-      osc.frequency.setValueAtTime(subtype==='cannon'?80:600,now);
-      osc.frequency.linearRampToValueAtTime(subtype==='cannon'?40:200,now+0.12);
-      gain.gain.setValueAtTime(subtype==='cannon'?0.2:0.08,now);
-      gain.gain.linearRampToValueAtTime(0,now+0.12);
-      osc.start(now); osc.stop(now+0.12);
-      break;
-    case 'kill':
-      osc.type='sine';
-      osc.frequency.setValueAtTime(220,now);
-      osc.frequency.linearRampToValueAtTime(110,now+0.1);
-      gain.gain.setValueAtTime(0.1,now);
-      gain.gain.linearRampToValueAtTime(0,now+0.1);
-      osc.start(now); osc.stop(now+0.1);
-      break;
-    case 'hit':
-      osc.type='sawtooth';
-      osc.frequency.setValueAtTime(60,now);
-      gain.gain.setValueAtTime(0.2,now);
-      gain.gain.linearRampToValueAtTime(0,now+0.2);
-      osc.start(now); osc.stop(now+0.2);
-      break;
-    case 'wave':
-      osc.type='sine';
-      [0,0.1,0.2].forEach(t => {
-        const o2=ctx.createOscillator(), g2=ctx.createGain();
-        o2.connect(g2); g2.connect(ctx.destination);
-        o2.frequency.value=220+t*110;
-        g2.gain.setValueAtTime(0.15,now+t);
-        g2.gain.linearRampToValueAtTime(0,now+t+0.2);
-        o2.start(now+t); o2.stop(now+t+0.2);
-      });
-      osc.start(now); osc.stop(now+0.01);
-      break;
-    case 'waveClear':
-      [0,0.15,0.3,0.45].forEach((t,i) => {
-        const o2=ctx.createOscillator(), g2=ctx.createGain();
-        o2.connect(g2); g2.connect(ctx.destination);
-        o2.frequency.value=[330,440,550,660][i];
-        g2.gain.setValueAtTime(0.15,now+t);
-        g2.gain.linearRampToValueAtTime(0,now+t+0.25);
-        o2.start(now+t); o2.stop(now+t+0.25);
-      });
-      osc.start(now); osc.stop(now+0.01);
-      break;
-    case 'gameOver':
-      osc.type='sawtooth';
-      osc.frequency.setValueAtTime(440,now);
-      osc.frequency.linearRampToValueAtTime(55,now+1.2);
-      gain.gain.setValueAtTime(0.2,now);
-      gain.gain.linearRampToValueAtTime(0,now+1.2);
-      osc.start(now); osc.stop(now+1.2);
-      break;
-    default:
-      osc.start(now); osc.stop(now+0.01);
-  }
-}
+const R=new THREE.WebGLRenderer({antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);
+R.outputEncoding=THREE.LinearEncoding;document.body.appendChild(R.domElement);
+const SC=new THREE.Scene();SC.background=new THREE.Color(0x1a0d08);SC.fog=new THREE.FogExp2(0x120800,0.018);
+const CAM=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.05,200);CAM.position.set(0,1.65,0);
+SC.add(new THREE.AmbientLight(0x886644,2.5));
+const SL=new THREE.DirectionalLight(0xff8833,2.0);SL.position.set(-20,15,-30);SC.add(SL);
+const FL=new THREE.DirectionalLight(0x5566aa,0.8);FL.position.set(10,8,5);SC.add(FL);
+const FTL=new THREE.PointLight(0xffcc44,3.0,20);FTL.position.set(0,4,0);SC.add(FTL);
+const FRL=new THREE.PointLight(0xff8822,2.0,8);FRL.position.set(2,0.5,2);SC.add(FRL);
+const lam=c=>new THREE.MeshLambertMaterial({color:c});
+const bas=c=>new THREE.MeshBasicMaterial({color:c});
+function B(w,h,d,c,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lam(c));m.position.set(x,y,z);SC.add(m);return m;}
+function CY(r,h,c,x,y,z,s=10){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),lam(c));m.position.set(x,y,z);SC.add(m);return m;}
+const GND=new THREE.Mesh(new THREE.PlaneGeometry(200,200),lam(0x4a2a10));
+GND.rotation.x=-Math.PI/2;GND.userData.g=true;SC.add(GND);
+for(let i=0;i<25;i++){const r=new THREE.Mesh(new THREE.SphereGeometry(0.2+Math.random()*0.5,5,4),lam(0x3a1f08));const a=Math.random()*Math.PI*2,d=12+Math.random()*45;r.position.set(Math.cos(a)*d,0.1,Math.sin(a)*d);r.scale.y=0.4+Math.random()*0.4;SC.add(r);}
+const WM=lam(0x5a3010),WT=lam(0x6b4018);
+[[14,3,0.5,0,1.5,-7],[14,3,0.5,0,1.5,7],[0.5,3,14,7,1.5,0],[0.5,3,14,-7,1.5,0]].forEach(([w,h,d,x,y,z])=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),WM);m.position.set(x,y,z);SC.add(m);});
+[[14.5,0.3,0.7,0,3.15,-7],[14.5,0.3,0.7,0,3.15,7],[0.7,0.3,14.5,7,3.15,0],[0.7,0.3,14.5,-7,3.15,0]].forEach(([w,h,d,x,y,z])=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),WT);m.position.set(x,y,z);SC.add(m);});
+[[-7,-7],[7,-7],[-7,7],[7,7]].forEach(([x,z])=>{CY(1.1,4,0x4a2d0a,x,2,z);const cp=new THREE.Mesh(new THREE.ConeGeometry(1.3,1.2,8),lam(0x2d1a05));cp.position.set(x,4.6,z);SC.add(cp);});
+CY(0.6,0.06,0x4d2808,0,0.85,0,16);CY(0.05,0.85,0x3d2005,0,0.42,0);B(0.95,0.01,0.75,0xc8a060,0,0.89,0);
+CY(0.25,0.05,0x2a1505,2,0.025,2,10);
+const FIRE=new THREE.Mesh(new THREE.ConeGeometry(0.18,0.4,8),new THREE.MeshLambertMaterial({color:0xff6600,emissive:new THREE.Color(0xcc2200)}));
+FIRE.position.set(2,0.22,2);SC.add(FIRE);
+for(let i=0;i<6;i++)B(0.1,1.2,0.1,0x3d2008,-3+i*1.1,0.6,-8.2);
+[[-50,-60,18,12],[-30,-62,22,16],[5,-65,28,18],[35,-60,20,14],[55,-55,16,11],[-60,-20,14,12],[-62,12,16,10],[60,-18,14,13],[62,18,18,12],[-35,58,20,12],[10,62,24,15],[45,56,18,11]].forEach(([x,z,rb,h])=>{const m=new THREE.Mesh(new THREE.ConeGeometry(rb/2,h,6),lam(0x1f0d05));m.position.set(x,h/2-1,z);SC.add(m);});
+for(let i=0;i<250;i++){const s=new THREE.Mesh(new THREE.SphereGeometry(0.12+Math.random()*0.12,4,4),bas(0xffffff));const th=Math.random()*Math.PI*2,ph=Math.random()*Math.PI*0.45;s.position.set(120*Math.sin(ph)*Math.cos(th),120*Math.cos(ph)+5,120*Math.sin(ph)*Math.sin(th));SC.add(s);}
+const G={gold:150,lives:5,wave:0,score:0,run:false,wa:false,st:'watchtower',towers:[],enemies:[],projs:[],nE:0,nT:0,nP:0,ac:null};
+const TD={watchtower:{cost:40,range:12,dmg:15,rate:1200,col:0x8B6914,h:2.5,r:0.3,pc:0xffcc44,ps:22},cannon:{cost:80,range:9,dmg:45,rate:2800,col:0x555555,h:1.8,r:0.45,pc:0x888888,ps:16,aoe:2.5},bonfire:{cost:50,range:6,dmg:8,rate:600,col:0xff6600,h:1.2,r:0.5,pc:0xff4400,ps:20,slow:true},tesla:{cost:110,range:8,dmg:30,rate:1600,col:0x44aaff,h:3.0,r:0.25,pc:0x88ddff,ps:28,chain:3}};
+const ED={raider:{hp:60,spd:3.5,rew:10,col:0x882200,sc:1.0},horseman:{hp:40,spd:6.0,rew:15,col:0x553311,sc:0.85},dynamiter:{hp:80,spd:2.5,rew:18,col:0x664400,sc:1.1},armored:{hp:220,spd:1.8,rew:35,col:0x444444,sc:1.3},boss:{hp:600,spd:1.5,rew:80,col:0x1a0000,sc:2.0}};
+const SP=[{x:0,z:-55},{x:55,z:0},{x:0,z:55},{x:-55,z:0}];
+const DR=['NORTH','EAST','SOUTH','WEST'];
+const GM=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,2,10),new THREE.MeshBasicMaterial({color:0xc9a84c,transparent:true,opacity:0.4}));
+GM.visible=false;SC.add(GM);
+const GR=new THREE.Mesh(new THREE.RingGeometry(11.8,12.2,48),new THREE.MeshBasicMaterial({color:0xc9a84c,transparent:true,opacity:0.15,side:THREE.DoubleSide}));
+GR.rotation.x=-Math.PI/2;GR.position.y=0.05;GR.visible=false;SC.add(GR);
+const keys={};let mx=false,pitch=0,yaw=0;
+const RAY=new THREE.Raycaster();
+document.getElementById('startBtn').onclick=()=>{document.getElementById('overlay').style.display='none';R.domElement.requestPointerLock();startGame();};
+document.addEventListener('pointerlockchange',()=>{mx=!!document.pointerLockElement;});
+document.addEventListener('keydown',e=>{keys[e.code]=true;const mp={Digit1:'watchtower',Digit2:'cannon',Digit3:'bonfire',Digit4:'tesla'};if(mp[e.code])sel(mp[e.code],document.querySelector(`[data-type="${mp[e.code]}"]`));});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('mousemove',e=>{if(!mx)return;yaw-=e.movementX*0.002;pitch=Math.max(-1.2,Math.min(1.2,pitch-e.movementY*0.002));});
+document.addEventListener('click',()=>{if(!mx||!G.run)return;RAY.setFromCamera(new THREE.Vector2(0,0),CAM);const h=RAY.intersectObject(GND);if(!h.length)return;const p=h[0].point;if(Math.abs(p.x)<8&&Math.abs(p.z)<8)return;place(p.x,p.z);});
+function sel(type,btn){G.st=type;document.querySelectorAll('.tb').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');const d=TD[type];GR.geometry=new THREE.RingGeometry(d.range-0.15,d.range+0.15,48);}
+function startGame(){G.gold=150;G.lives=5;G.wave=0;G.score=0;G.run=true;G.wa=false;G.towers.forEach(t=>SC.remove(t.mesh));G.enemies.forEach(e=>{SC.remove(e.mesh);SC.remove(e.hb);SC.remove(e.hf);});G.projs.forEach(p=>SC.remove(p.mesh));G.towers=[];G.enemies=[];G.projs=[];G.nE=0;G.nT=0;G.nP=0;document.getElementById('gameover').style.display='none';hud();initAudio();setTimeout(nwave,3000);}
+function place(x,z){const d=TD[G.st];if(G.gold<d.cost){beep(80,0.1);return;}for(const t of G.towers){const dx=t.x-x,dz=t.z-z;if(Math.sqrt(dx*dx+dz*dz)<1.5){beep(80,0.1);return;}}G.gold-=d.cost;hud();beep(440,0.08);const gr=new THREE.Group();const base=new THREE.Mesh(new THREE.CylinderGeometry(d.r+0.15,d.r+0.15,0.15,10),lam(0x2d1505));base.position.y=0.07;gr.add(base);const body=new THREE.Mesh(new THREE.CylinderGeometry(d.r,d.r,d.h,10),lam(d.col));body.position.y=d.h/2;gr.add(body);if(G.st==='bonfire'){const fl=new THREE.Mesh(new THREE.ConeGeometry(d.r*0.8,0.7,8),new THREE.MeshLambertMaterial({color:0xff6600,emissive:new THREE.Color(0xcc2200)}));fl.position.y=d.h+0.35;fl.userData.fl=true;gr.add(fl);const pl=new THREE.PointLight(0xff8822,1.5,d.range);pl.position.y=d.h+0.5;gr.add(pl);}if(G.st==='tesla'){const ri=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.06,8,20),new THREE.MeshLambertMaterial({color:0x44aaff,emissive:new THREE.Color(0x2266ff)}));ri.position.y=d.h+0.1;ri.userData.tr=true;gr.add(ri);const pl=new THREE.PointLight(0x44aaff,1.2,d.range);pl.position.y=d.h;gr.add(pl);}if(G.st==='cannon'){const ba=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.9,8),lam(0x333333));ba.rotation.x=Math.PI/2;ba.position.set(0,d.h-0.2,-0.5);gr.add(ba);}if(G.st==='watchtower'){const tp=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.5,0.8),lam(0x6b4010));tp.position.y=d.h+0.25;gr.add(tp);}gr.position.set(x,0,z);SC.add(gr);G.towers.push({id:G.nT++,type:G.st,x,z,d,lastFired:0,mesh:gr});}
+function nwave(){if(!G.run)return;G.wave++;document.getElementById('wv').textContent=G.wave;const dir=Math.floor(Math.random()*4);document.getElementById('btitle').textContent='WAVE '+G.wave;document.getElementById('bsub').textContent='RAIDERS FROM THE '+DR[dir];const bn=document.getElementById('banner');bn.style.opacity='1';wbeep();setTimeout(()=>{bn.style.opacity='0';swave(G.wave,dir);},2500);}
+function comp(w){if(w<=2)return['raider'];if(w<=4)return['raider','raider','horseman'];if(w<=6)return['raider','horseman','dynamiter'];if(w<=9)return['horseman','dynamiter','armored'];return['dynamiter','armored','boss'];}
+function swave(w,dir){G.wa=true;const cnt=5+w*2;const types=comp(w);const sp=SP[dir];let i=0;const iv=setInterval(()=>{if(!G.run){clearInterval(iv);return;}if(i>=cnt){clearInterval(iv);return;}const t=types[Math.floor(Math.random()*types.length)];const j=()=>(Math.random()-0.5)*10;se(t,sp.x+j(),sp.z+j());i++;},Math.max(400,800-w*30));}
+function se(type,x,z){const d={...ED[type]};const sc=d.sc;const gr=new THREE.Group();const body=new THREE.Mesh(new THREE.BoxGeometry(0.5*sc,1.0*sc,0.4*sc),lam(d.col));body.position.y=0.5*sc;gr.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(0.2*sc,8,6),lam(d.col));head.position.y=1.15*sc;gr.add(head);if(type!=='boss'){const hat=new THREE.Mesh(new THREE.CylinderGeometry(0.22*sc,0.22*sc,0.25*sc,10),lam(0x1a0f00));hat.position.y=1.38*sc;gr.add(hat);const brim=new THREE.Mesh(new THREE.CylinderGeometry(0.35*sc,0.35*sc,0.04*sc,10),lam(0x1a0f00));brim.position.y=1.26*sc;gr.add(brim);}gr.position.set(x,0,z);SC.add(gr);const hy=sc*1.8+0.2;const hb=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.07),new THREE.MeshBasicMaterial({color:0x330000,side:THREE.DoubleSide}));const hf=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.065),new THREE.MeshBasicMaterial({color:0xcc2200,side:THREE.DoubleSide}));hb.position.set(x,hy,z);hf.position.set(x,hy+0.005,z);SC.add(hb);SC.add(hf);G.enemies.push({id:G.nE++,type,x,z,hp:d.hp,mhp:d.hp,spd:d.spd,rew:d.rew,slow:0,mesh:gr,hb,hf,sc});}
+function tick(){if(!G.run)return;const now=Date.now();const dt=0.05;const dead=[];for(const e of G.enemies){if(e.hp<=0){dead.push(e);continue;}const spd=e.slow>0?e.spd*0.5:e.spd;if(e.slow>0)e.slow-=dt;const dx=-e.x,dz=-e.z,dist=Math.sqrt(dx*dx+dz*dz);if(dist<3){e.hp=0;G.lives--;hud();beep(60,0.2);if(G.lives<=0){go();return;}dead.push(e);continue;}const nx=dx/dist,nz=dz/dist;e.x+=nx*spd*dt;e.z+=nz*spd*dt;e.mesh.position.set(e.x,0,e.z);e.mesh.rotation.y=Math.atan2(nx,nz);const hy=e.sc*1.8+0.2;e.hb.position.set(e.x,hy,e.z);e.hf.position.set(e.x,hy+0.005,e.z);e.hb.lookAt(CAM.position);e.hf.lookAt(CAM.position);}dead.forEach(e=>{G.enemies=G.enemies.filter(x=>x!==e);SC.remove(e.mesh);SC.remove(e.hb);SC.remove(e.hf);});for(const t of G.towers){if(now-t.lastFired<t.d.rate)continue;let cl=null,cd=Infinity;for(const e of G.enemies){if(e.hp<=0)continue;const dx=e.x-t.x,dz=e.z-t.z,d=Math.sqrt(dx*dx+dz*dz);if(d<t.d.range&&d<cd){cd=d;cl=e;}}if(cl){t.lastFired=now;fp(t,cl);}}const pd=[];for(const p of G.projs){p.x+=p.vx*dt;p.z+=p.vz*dt;p.life-=dt;p.mesh.position.set(p.x,p.y,p.z);let hit=false;for(const e of G.enemies){if(e.hp<=0)continue;const dx=e.x-p.x,dz=e.z-p.z;if(Math.sqrt(dx*dx+dz*dz)<0.8){if(p.aoe){for(const e2 of G.enemies){const dx2=e2.x-p.x,dz2=e2.z-p.z;if(Math.sqrt(dx2*dx2+dz2*dz2)<p.aoe)dmg(e2,p.d);}boom(p.x,p.z);}else if(p.ch){let tg=[e];for(const e2 of G.enemies){if(tg.length>=p.ch||e2===e||e2.hp<=0)continue;const dx2=e2.x-e.x,dz2=e2.z-e.z;if(Math.sqrt(dx2*dx2+dz2*dz2)<4)tg.push(e2);}tg.forEach(t=>dmg(t,p.d));}else{dmg(e,p.d);if(p.sl)e.slow=2.0;}hit=true;pd.push(p);break;}}if(!hit&&p.life<=0)pd.push(p);}pd.forEach(p=>{G.projs=G.projs.filter(x=>x!==p);SC.remove(p.mesh);});if(G.wa&&G.enemies.length===0){G.wa=false;G.gold+=20+G.wave*5;hud();beep(660,0.08);setTimeout(()=>beep(880,0.08),150);setTimeout(nwave,4000);}}
+function dmg(e,d){e.hp-=d;if(e.hp<=0){G.gold+=e.rew;G.score++;hud();beep(220,0.06);puff(e.x,e.z);return;}const pct=Math.max(0,e.hp/e.mhp);e.hf.scale.x=pct;e.hf.material.color.setHex(pct>0.5?0x22cc00:pct>0.25?0xffaa00:0xcc2200);}
+function fp(t,tgt){const dx=tgt.x-t.x,dz=tgt.z-t.z,dist=Math.sqrt(dx*dx+dz*dz),nx=dx/dist,nz=dz/dist,sy=t.d.h-0.3;const m=new THREE.Mesh(new THREE.SphereGeometry(t.type==='cannon'?0.18:0.09,6,5),bas(t.d.pc));m.position.set(t.x,sy,t.z);SC.add(m);G.projs.push({id:G.nP++,x:t.x,z:t.z,y:sy,vx:nx*t.d.ps,vz:nz*t.d.ps,d:t.d.dmg,life:3,mesh:m,aoe:t.d.aoe||null,ch:t.d.chain||null,sl:t.d.slow||null});beep(t.type==='cannon'?80:600,0.05);}
+function boom(x,z){const m=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.9}));m.position.set(x,0.5,z);SC.add(m);let s=1;const iv=setInterval(()=>{s+=0.6;m.scale.setScalar(s);m.material.opacity-=0.12;if(m.material.opacity<=0){clearInterval(iv);SC.remove(m);}},30);}
+function puff(x,z){for(let i=0;i<4;i++){const p=new THREE.Mesh(new THREE.SphereGeometry(0.08,5,4),new THREE.MeshBasicMaterial({color:0xcc4400,transparent:true,opacity:1}));p.position.set(x,0.8,z);const vx=(Math.random()-0.5)*4,vz=(Math.random()-0.5)*4;SC.add(p);let t=0;const iv=setInterval(()=>{t+=0.04;p.position.x+=vx*0.04;p.position.z+=vz*0.04;p.position.y-=0.08;p.material.opacity=1-t*3;if(t>0.35){clearInterval(iv);SC.remove(p);}},40);}}
+function hud(){document.getElementById('gv').textContent=G.gold;document.getElementById('wv').textContent=G.wave;document.getElementById('lv').textContent='♥'.repeat(Math.max(0,G.lives))+'♡'.repeat(Math.max(0,5-G.lives));}
+function go(){G.run=false;document.getElementById('fs').textContent='SURVIVED '+G.wave+' WAVES · '+G.score+' ENEMIES DEFEATED';document.getElementById('gameover').style.display='flex';}
+function restart(){startGame();R.domElement.requestPointerLock();}
+function initAudio(){if(G.ac)return;G.ac=new(window.AudioContext||window.webkitAudioContext)();const buf=G.ac.createBuffer(1,G.ac.sampleRate*2,G.ac.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*0.3;const src=G.ac.createBufferSource();src.buffer=buf;src.loop=true;const f=G.ac.createBiquadFilter();f.type='lowpass';f.frequency.value=280;const g=G.ac.createGain();g.gain.value=0.04;src.connect(f);f.connect(g);g.connect(G.ac.destination);src.start();}
+function beep(freq,vol=0.1){if(!G.ac)return;const o=G.ac.createOscillator(),g=G.ac.createGain();o.connect(g);g.connect(G.ac.destination);o.frequency.value=freq;g.gain.setValueAtTime(vol,G.ac.currentTime);g.gain.linearRampToValueAtTime(0,G.ac.currentTime+0.12);o.start();o.stop(G.ac.currentTime+0.12);}
+function wbeep(){if(!G.ac)return;[0,0.1,0.2].forEach((t,i)=>{const o=G.ac.createOscillator(),g=G.ac.createGain();o.connect(g);g.connect(G.ac.destination);o.frequency.value=220+i*110;g.gain.setValueAtTime(0.15,G.ac.currentTime+t);g.gain.linearRampToValueAtTime(0,G.ac.currentTime+t+0.2);o.start(G.ac.currentTime+t);o.stop(G.ac.currentTime+t+0.2);});}
+const CLK=new THREE.Clock();const fwd=new THREE.Vector3(),rgt=new THREE.Vector3(),mov=new THREE.Vector3();let tacc=0;
+(function loop(){requestAnimationFrame(loop);const dt=Math.min(CLK.getDelta(),0.05),t=CLK.getElapsedTime();
+CAM.rotation.order='YXZ';CAM.rotation.y=yaw;CAM.rotation.x=pitch;
+if(mx&&G.run){fwd.set(Math.sin(yaw),0,Math.cos(yaw));rgt.set(Math.cos(yaw),0,-Math.sin(yaw));mov.set(0,0,0);if(keys['KeyW']||keys['ArrowUp'])mov.sub(fwd);if(keys['KeyS']||keys['ArrowDown'])mov.add(fwd);if(keys['KeyA']||keys['ArrowLeft'])mov.sub(rgt);if(keys['KeyD']||keys['ArrowRight'])mov.add(rgt);if(mov.lengthSq()>0){mov.normalize().multiplyScalar(5*dt);CAM.position.add(mov);CAM.position.x=Math.max(-30,Math.min(30,CAM.position.x));CAM.position.z=Math.max(-30,Math.min(30,CAM.position.z));CAM.position.y=1.65;}}
+if(G.run&&mx){RAY.setFromCamera(new THREE.Vector2(0,0),CAM);const h=RAY.intersectObject(GND);if(h.length){const p=h[0].point;const ins=Math.abs(p.x)<8&&Math.abs(p.z)<8;GM.visible=!ins;GR.visible=!ins;if(!ins){const d=TD[G.st];GM.position.set(p.x,d.h/2,p.z);GM.scale.y=d.h/2;GR.position.set(p.x,0.05,p.z);}}else{GM.visible=false;GR.visible=false;}}
+FIRE.scale.set(0.9+Math.sin(t*9)*0.12,1+Math.sin(t*11)*0.15,0.9+Math.cos(t*7)*0.1);FRL.intensity=1.8+Math.sin(t*8)*0.5+Math.sin(t*13)*0.25;FTL.intensity=2.8+Math.sin(t*57)*0.15;
+G.towers.forEach(tw=>tw.mesh.traverse(c=>{if(c.userData.tr)c.rotation.y+=dt*2;if(c.userData.fl)c.scale.set(0.9+Math.sin(t*9+tw.id)*0.1,1+Math.sin(t*11+tw.id)*0.15,0.9);}));
+if(G.run){tacc+=dt;if(tacc>=0.05){tacc=0;tick();}}
+R.render(SC,CAM);})();
+window.addEventListener('resize',()=>{CAM.aspect=innerWidth/innerHeight;CAM.updateProjectionMatrix();R.setSize(innerWidth,innerHeight);});
 </script>
 </body>
 </html>

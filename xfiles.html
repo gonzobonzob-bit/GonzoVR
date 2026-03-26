@@ -3,749 +3,380 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>X-FILES: THE TRUTH IS OUT THERE — VR</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.5.0/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/nicktarnold/aframe-teleport-controls@v0.3.1/dist/aframe-teleport-controls.min.js"></script>
+<title>X-FILES: THE TRUTH IS OUT THERE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  body { margin: 0; background: #000; font-family: monospace; }
-  #loading {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; color: #00ff41; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; z-index: 9999;
-    font-family: 'Courier New', monospace; font-size: 18px; letter-spacing: 3px;
-  }
-  #loading h1 { font-size: 32px; color: #00ff41; text-shadow: 0 0 20px #00ff41; margin-bottom: 10px; }
-  #loading p { color: #005500; font-size: 12px; }
-  .blink { animation: blink 1s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-  #ui-overlay {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    color: #00ff41; font-family: 'Courier New', monospace; font-size: 11px;
-    text-align: center; pointer-events: none; z-index: 100;
-    text-shadow: 0 0 8px #00ff41; letter-spacing: 1px;
-    background: rgba(0,0,0,0.6); padding: 8px 16px; border: 1px solid #003300;
-  }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
+canvas { display:block; }
+#overlay {
+  position:fixed; inset:0;
+  background:#000; color:#00ff41; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; z-index:100;
+}
+#overlay h1 { font-size:42px; letter-spacing:8px; text-shadow:0 0 20px #00ff41; margin-bottom:16px; }
+#overlay p { font-size:12px; letter-spacing:4px; color:#005500; margin:4px 0; }
+#overlay .start-btn {
+  margin-top:30px; padding:14px 40px;
+  background:transparent; border:1px solid #00ff41; color:#00ff41;
+  font-family:'Courier New',monospace; font-size:13px; letter-spacing:4px;
+  cursor:pointer;
+}
+#overlay .start-btn:hover { background:rgba(0,255,65,0.1); }
+#hud {
+  position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+  color:#00ff41; font-size:10px; letter-spacing:2px; text-align:center;
+  pointer-events:none; z-index:50;
+  background:rgba(0,0,0,0.7); padding:7px 16px; border:1px solid #003300;
+  white-space:nowrap;
+}
+#case-panel {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:500px; max-width:92vw;
+  background:rgba(3,8,3,0.97); border:1px solid #00ff41;
+  padding:28px; z-index:200; display:none;
+}
+#case-panel .cp-hdr { font-size:9px; letter-spacing:5px; color:#00ff41; margin-bottom:10px; }
+#case-panel .cp-cls { font-size:11px; color:#ff3333; margin-bottom:10px; letter-spacing:3px; }
+#case-panel .cp-id  { font-size:11px; color:#88ff88; margin-bottom:4px; }
+#case-panel .cp-ttl { font-size:22px; color:#fff; letter-spacing:2px; margin-bottom:14px; }
+#case-panel .cp-div { height:1px; background:#003300; margin-bottom:14px; }
+#case-panel .cp-sum { font-size:12px; color:#aaffaa; line-height:1.9; margin-bottom:18px; }
+#case-panel .cp-cls2{ font-size:10px; letter-spacing:3px; color:#005500; text-align:center; cursor:pointer; }
+#case-panel .cp-cls2:hover { color:#00ff41; }
+#xhair {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  pointer-events:none; z-index:50; width:14px; height:14px;
+}
+#xhair::before,#xhair::after{content:'';position:absolute;background:#00ff4188;}
+#xhair::before{width:14px;height:1px;top:6px;left:0;}
+#xhair::after{width:1px;height:14px;top:0;left:6px;}
 </style>
 </head>
 <body>
 
-<div id="loading">
+<div id="overlay">
   <h1>X-FILES</h1>
   <p>FEDERAL BUREAU OF INVESTIGATION</p>
   <p>CLASSIFIED: EYES ONLY</p>
-  <br>
-  <p class="blink">LOADING CASE FILES...</p>
+  <p style="margin-top:8px">SPECIAL AGENT FOX MULDER · BASEMENT OFFICE</p>
+  <button class="start-btn" id="startBtn">▶ ENTER BASEMENT</button>
 </div>
 
-<div id="ui-overlay">
-  LOOK AT A CASE FILE TO INVESTIGATE · TRIGGER = READ FILE · THUMBSTICK = TELEPORT
+<div id="xhair"></div>
+<div id="hud">WASD = MOVE &nbsp;·&nbsp; MOUSE = LOOK &nbsp;·&nbsp; CLICK CARDS TO READ &nbsp;·&nbsp; ESC = CLOSE</div>
+
+<div id="case-panel">
+  <div class="cp-hdr">FEDERAL BUREAU OF INVESTIGATION — CLASSIFIED FILE</div>
+  <div class="cp-cls" id="cp-cls"></div>
+  <div class="cp-id"  id="cp-id"></div>
+  <div class="cp-ttl" id="cp-ttl"></div>
+  <div class="cp-div"></div>
+  <div class="cp-sum" id="cp-sum"></div>
+  <div class="cp-cls2" onclick="closePanel()">[ CLICK TO CLOSE FILE ]</div>
 </div>
 
 <script>
-// ─── CASE DATA ───────────────────────────────────────────────────────────────
-const CASES = [
-  {
-    id: "X-File 1013",
-    title: "EUGENE VICTOR TOOMS",
-    subtitle: "Case 1.03 / 1.21",
-    classification: "UNNATURAL BIOLOGY",
-    summary: "Subject possesses retractable skeletal structure allowing ingress through small apertures. Hibernates 30-year cycles. Harvests human livers for sustenance. Estimated kill count: 5 per hibernation period dating back to 1903. DO NOT ENGAGE ALONE.",
-    string: "#ff3333",
-    pinX: -1.8, pinY: 0.6
-  },
-  {
-    id: "X-File 1214",
-    title: "THE FLUKEMAN",
-    subtitle: "Case 2.02",
-    classification: "PARASITIC ENTITY",
-    summary: "Humanoid fluke worm mutation. Origin: Chernobyl sewage runoff via Black Sea shipping vessel. Reproduces via larvae deposited in human hosts through bite. Believed destroyed — remains unconfirmed. Chernobyl connection suppressed by DOD.",
-    string: "#ff6600",
-    pinX: -0.7, pinY: 0.9
-  },
-  {
-    id: "X-File 0467",
-    title: "BLACK OIL",
-    subtitle: "Piper Maru / Apocrypha",
-    classification: "EXTRATERRESTRIAL PATHOGEN",
-    summary: "Sentient alien organism transmitted through ocular contact. Capable of full host possession. Found in downed WWII aircraft — Pacific theater. Connected to Syndicate experiments and colonization agenda. THE ALIEN OIL IS THE KEY.",
-    string: "#9900cc",
-    pinX: 0.4, pinY: 0.7
-  },
-  {
-    id: "X-File 7777",
-    title: "COLONIZATION",
-    subtitle: "MYTHOLOGY ARC",
-    classification: "CONSPIRACY / EXTRATERRESTRIAL",
-    summary: "Planned alien colonization of Earth. Syndicate collaborated since Roswell 1947. Smallpox genome catalogued for alien virus compatibility testing. Bees used as vectors. Black cancer = advance scout organism. Resistance exists — rebel aliens oppose colonization.",
-    string: "#00cc44",
-    pinX: 1.5, pinY: 1.1
-  },
-  {
-    id: "X-File 2231",
-    title: "DUANE BARRY / ASCENSION",
-    subtitle: "Case 2.05-2.06",
-    classification: "ABDUCTION",
-    summary: "Former FBI agent Duane Barry reported repeated alien abductions. Metallic implants found in sinus cavity, gums, and abdomen — non-terrestrial origin confirmed by Dr. Scully. Barry abducted Scully from her apartment. Scully missing 84 days. NO OFFICIAL EXPLANATION.",
-    string: "#ff3333",
-    pinX: -1.2, pinY: 0.2
-  },
-  {
-    id: "X-File 3301",
-    title: "PUSHER / ROBERT MODELL",
-    subtitle: "Case 3.17",
-    classification: "PSI PHENOMENON",
-    summary: "Subject demonstrated ability to impose his will through spoken word — victims complied fatally. Caused multiple suicides and murders via phone calls. Low-grade brain tumor believed to cause abilities. Apprehended after Mulder resisted psionic control. Relapse documented.",
-    string: "#ffcc00",
-    pinX: 0.9, pinY: 0.3
-  },
-  {
-    id: "X-File 5512",
-    title: "HOME",
-    subtitle: "Case 4.02",
-    classification: "HUMAN ABERRATION",
-    summary: "Peaceville, PA. Peacock family — three brothers, severely inbred, possibly for multiple generations. Quadruple amputee matriarch concealed beneath floorboards. One infant corpse recovered from field. Peacocks fled. LOCATION UNKNOWN. File sealed by order of AD Skinner.",
-    string: "#cc0000",
-    pinX: -0.3, pinY: 0.5
-  },
-  {
-    id: "X-File 6601",
-    title: "THE SMOKING MAN",
-    subtitle: "C.G.B. SPENDER",
-    classification: "CLASSIFIED — DO NOT DISTRIBUTE",
-    summary: "Known alias: Cancer Man. Believed orchestrator of UFO crash cover-ups dating to 1952. Personal involvement in JFK assassination suspected. Controls DOD, CIA black budgets. Connection to Syndicate confirmed. Present at Mulder's father's death. MOTIVE UNKNOWN.",
-    string: "#9900cc",
-    pinX: 2.0, pinY: 0.5
-  },
-  {
-    id: "X-File 9002",
-    title: "JOSE CHUNG'S FROM OUTER SPACE",
-    subtitle: "Case 3.20",
-    classification: "CONFLICTING WITNESS ACCOUNTS",
-    summary: "Three witnesses. Three entirely different accounts of alien abduction. Men in Black involvement — one confirmed NOT human. Air Force hypnotic regression used on civilians. Lord Kinbote — inner-Earth creature — mentioned by multiple unconnected sources. Truth: indeterminate.",
-    string: "#00aaff",
-    pinX: -2.1, pinY: 0.0
-  },
-  {
-    id: "X-File 0001",
-    title: "PILOT — BELLEFLEUR, OREGON",
-    subtitle: "Case 1.01",
-    classification: "INITIAL X-FILE",
-    summary: "First documented case. Four teens found dead — bodies exhumed showing radiation burns and anomalous implants. Nine minutes of missing time experienced by Mulder and Scully. Evidence incinerated — perpetrated by unknown party. This case opened the X-Files.",
-    string: "#ffcc00",
-    pinX: 1.1, pinY: -0.2
-  },
-  {
-    id: "X-File 4400",
-    title: "SAMANTHA MULDER",
-    subtitle: "ONGOING",
-    classification: "PERSONAL / UNRESOLVED",
-    summary: "Sister of Agent Fox Mulder. Abducted November 27, 1973 at age 8. Mulder witnessed event. Government used her as leverage against Bill Mulder. Multiple Samantha clones encountered and terminated. Walk-ins theory: her soul taken to spare her from further experimentation. Case remains open.",
-    string: "#ff3333",
-    pinX: -0.9, pinY: -0.2
-  }
+// ── CASE DATA ──────────────────────────────────────────────────────────────
+const CASES=[
+  {id:"X-File 1013",title:"EUGENE VICTOR TOOMS",cls:"UNNATURAL BIOLOGY",sub:"Case 1.03/1.21",col:0xff3333,
+   sum:"Subject possesses retractable skeletal structure allowing ingress through small apertures. Hibernates 30-year cycles. Harvests human livers for sustenance. Kill count: 5 per cycle dating back to 1903. DO NOT ENGAGE ALONE."},
+  {id:"X-File 1214",title:"THE FLUKEMAN",cls:"PARASITIC ENTITY",sub:"Case 2.02",col:0xff6600,
+   sum:"Humanoid fluke worm mutation. Origin: Chernobyl sewage runoff via Black Sea shipping vessel. Reproduces via larvae deposited in human hosts through bite. Believed destroyed — remains unconfirmed. Chernobyl connection suppressed by DOD."},
+  {id:"X-File 0467",title:"BLACK OIL",cls:"EXTRATERRESTRIAL PATHOGEN",sub:"Piper Maru / Apocrypha",col:0x9900cc,
+   sum:"Sentient alien organism transmitted through ocular contact. Capable of full host possession. Found in downed WWII aircraft — Pacific theater. Connected to Syndicate colonization agenda. THE ALIEN OIL IS THE KEY."},
+  {id:"X-File 7777",title:"COLONIZATION",cls:"CONSPIRACY / EXTRATERRESTRIAL",sub:"MYTHOLOGY ARC",col:0x00cc44,
+   sum:"Planned alien colonization of Earth. Syndicate collaborated since Roswell 1947. Smallpox genome catalogued for compatibility testing. Bees used as vectors. Black cancer = advance scout organism. Rebel alien resistance exists."},
+  {id:"X-File 2231",title:"DUANE BARRY / ASCENSION",cls:"ABDUCTION",sub:"Case 2.05-2.06",col:0xff3333,
+   sum:"Former FBI agent reported repeated alien abductions. Metallic implants found — non-terrestrial origin confirmed by Scully. Barry abducted Scully from her apartment. Scully missing 84 days. NO OFFICIAL EXPLANATION."},
+  {id:"X-File 3301",title:"PUSHER — ROBERT MODELL",cls:"PSI PHENOMENON",sub:"Case 3.17",col:0xffcc00,
+   sum:"Subject demonstrated ability to impose his will through spoken word — victims complied fatally. Caused multiple suicides via phone calls. Low-grade brain tumor believed source of abilities. Mulder resisted psionic control during confrontation."},
+  {id:"X-File 5512",title:"HOME",cls:"HUMAN ABERRATION",sub:"Case 4.02",col:0xcc0000,
+   sum:"Peaceville, PA. Peacock family — severely inbred across multiple generations. Quadruple amputee matriarch concealed beneath floorboards. One infant corpse recovered from field. Peacocks fled — LOCATION UNKNOWN. File sealed by Skinner."},
+  {id:"X-File 6601",title:"THE SMOKING MAN",cls:"CLASSIFIED — DO NOT DISTRIBUTE",sub:"C.G.B. SPENDER",col:0x9900cc,
+   sum:"Known alias: Cancer Man. Orchestrator of UFO crash cover-ups since 1952. Involvement in JFK assassination suspected. Controls DOD and CIA black budgets. Syndicate connection confirmed. Present at Mulder's father's death. MOTIVE UNKNOWN."},
+  {id:"X-File 9002",title:"JOSE CHUNG'S FROM OUTER SPACE",cls:"CONFLICTING ACCOUNTS",sub:"Case 3.20",col:0x00aaff,
+   sum:"Three witnesses. Three entirely different abduction accounts. Men in Black involvement — one confirmed NOT human. Air Force hypnotic regression used on civilians. Lord Kinbote referenced by unconnected sources. Truth: indeterminate."},
+  {id:"X-File 0001",title:"PILOT — BELLEFLEUR, OREGON",cls:"INITIAL X-FILE",sub:"Case 1.01",col:0xffcc00,
+   sum:"First documented case. Four teens found dead — radiation burns and anomalous implants. Nine minutes of missing time experienced by Mulder and Scully. Evidence incinerated by unknown party. This case opened the X-Files."},
+  {id:"X-File 4400",title:"SAMANTHA MULDER",cls:"PERSONAL / UNRESOLVED",sub:"ONGOING",col:0xff3333,
+   sum:"Sister of Agent Fox Mulder. Abducted November 27, 1973 at age 8. Government used her as leverage against Bill Mulder. Multiple Samantha clones terminated. Walk-ins theory: soul taken to spare further experimentation. CASE REMAINS OPEN."},
 ];
 
-// ─── PIN POSITIONS (slightly randomized for realism) ─────────────────────────
-const PIN_COLORS = ["#ff2222","#ffdd00","#ff6600","#22ffaa","#ff22cc","#2288ff"];
+// ── RENDERER ──────────────────────────────────────────────────────────────
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputEncoding=THREE.LinearEncoding;
+document.body.appendChild(renderer.domElement);
 
-// ─── CARD READER STATE ────────────────────────────────────────────────────────
-let activeCard = null;
-let cardReader = null;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x1a1208);
+scene.fog=new THREE.FogExp2(0x0d0a06,0.06);
 
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.getElementById('loading').style.display = 'none';
-  }, 2000);
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,0.05,60);
+camera.position.set(0,1.6,3);
+
+// ── LIGHTS ────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0x998866,2.0));
+const L=(c,i,d,x,y,z)=>{const l=new THREE.PointLight(c,i,d);l.position.set(x,y,z);scene.add(l);return l;};
+L(0xccddaa,3.0,16, 0,2.8,0);
+L(0xbbcc99,2.0,10,-2,2.8,-1);
+L(0xffdd88,2.5,7,  1.5,1.3,1.8);
+L(0xffeecc,3.0,10, 0,2.6,-2);
+L(0xff8822,2.0,5,  2,0.5,2);
+const flickerLight=L(0xccddaa,2.5,14, 0,2.8,0);
+
+// ── GEOMETRY HELPERS ──────────────────────────────────────────────────────
+const lam=(c,opts={})=>new THREE.MeshLambertMaterial({color:c,...opts});
+const bas=(c,opts={})=>new THREE.MeshBasicMaterial({color:c,...opts});
+
+function B(w,h,d,mat,x,y,z,ry=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    typeof mat==='number'?lam(mat):mat);
+  m.position.set(x,y,z); m.rotation.y=ry; scene.add(m); return m;
+}
+function C(r,h,mat,x,y,z,s=12){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),
+    typeof mat==='number'?lam(mat):mat);
+  m.position.set(x,y,z); scene.add(m); return m;
+}
+function P(w,h,mat,x,y,z,rx=-Math.PI/2,ry=0){
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    typeof mat==='number'?lam(mat,{side:THREE.DoubleSide}):mat);
+  m.position.set(x,y,z); m.rotation.set(rx,ry,0); scene.add(m); return m;
+}
+
+// ── ROOM ──────────────────────────────────────────────────────────────────
+P(10,12,0x2a1f0e, 0,0,0);           // floor
+B(10,0.05,12,0x1c1812, 0,3.02,0);   // ceiling
+B(10,3.1,0.08,0x3d2c18, 0,1.55,-4.04); // back wall
+B(10,3.1,0.08,0x352a15, 0,1.55,4.04);  // front wall
+B(0.08,3.1,12,0x302615,-5.04,1.55,0);  // left wall
+B(0.08,3.1,12,0x302615, 5.04,1.55,0);  // right wall
+// Floor planks
+for(let i=-4.5;i<5;i+=0.7)B(10,0.005,0.03,0x1a1005,0,0.005,i);
+
+// ── CORKBOARD ─────────────────────────────────────────────────────────────
+B(8.2,2.8,0.06,0x9B7924, 0,1.7,-3.97);
+B(8.4,0.12,0.1,0x3a2800, 0,3.06,-3.95);
+B(8.4,0.12,0.1,0x3a2800, 0,0.34,-3.95);
+B(0.12,2.8,0.1,0x3a2800,-4.14,1.7,-3.95);
+B(0.12,2.8,0.1,0x3a2800, 4.14,1.7,-3.95);
+
+// ── BOARD TITLE ───────────────────────────────────────────────────────────
+(()=>{
+  const c=document.createElement('canvas');c.width=1024;c.height=56;
+  const x=c.getContext('2d');
+  x.fillStyle='#cc9900';x.font='bold 26px Courier New';x.textAlign='center';
+  x.fillText('THE X-FILES — CLASSIFIED CASE BOARD',512,38);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(6.5,0.35),
+    bas(0xffffff,{map:new THREE.CanvasTexture(c),transparent:true}));
+  m.position.set(0,3.08,-3.9);scene.add(m);
+})();
+
+// ── CASE CARDS ────────────────────────────────────────────────────────────
+const cardMeshes=[];
+const positions=[
+  [-3.2,2.55],[-1.6,2.6],[0.1,2.65],[1.8,2.55],[3.1,2.5],
+  [-3.0,1.8],[-1.0,1.75],[0.8,1.85],[2.5,1.8],
+  [-2.0,1.1],[0.5,1.05]
+];
+const pinPalette=[0xff2222,0xffdd00,0xff6600,0x22ffaa,0xff22cc,0x2288ff];
+
+CASES.forEach((c,i)=>{
+  const [px,py]=positions[i];
+  const rot=(Math.random()-0.5)*0.12;
+
+  // Card canvas texture
+  const cv=document.createElement('canvas');cv.width=256;cv.height=180;
+  const cx=cv.getContext('2d');
+  cx.fillStyle='#ede5c8';cx.fillRect(0,0,256,180);
+  cx.strokeStyle='#ccc0a0';cx.lineWidth=0.8;
+  for(let l=28;l<180;l+=18){cx.beginPath();cx.moveTo(8,l);cx.lineTo(248,l);cx.stroke();}
+  cx.save();cx.globalAlpha=0.3;cx.fillStyle='#cc0000';
+  cx.font='bold 20px Courier New';cx.translate(128,90);cx.rotate(-0.22);
+  cx.fillText('CLASSIFIED',−60,0);cx.restore();
+  cx.fillStyle='#555';cx.font='10px Courier New';cx.fillText(c.id,10,20);
+  cx.fillStyle='#111';cx.font='bold 12px Courier New';
+  cx.fillText(c.title.length>20?c.title.slice(0,18)+'..':c.title,10,46);
+  cx.fillStyle='#556600';cx.font='9px Courier New';
+  cx.fillText(c.cls.length>26?c.cls.slice(0,24)+'..':c.cls,10,62);
+  cx.fillStyle='#1a1a2a';cx.fillRect(10,74,68,52);
+  cx.fillStyle='#664400';cx.font='9px Courier New';cx.fillText(c.sub,86,96);
+
+  const mat=bas(0xffffff,{map:new THREE.CanvasTexture(cv),transparent:false});
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.37,0.018),mat);
+  mesh.position.set(px,py,-3.88);
+  mesh.rotation.z=rot;
+  mesh.userData={caseIndex:i};
+  scene.add(mesh);
+  cardMeshes.push(mesh);
+
+  // Pin
+  const pin=new THREE.Mesh(new THREE.SphereGeometry(0.018,8,8),
+    lam(pinPalette[i%pinPalette.length]));
+  pin.position.set(px,py+0.205,-3.865);
+  scene.add(pin);
+});
+
+// ── STRINGS ───────────────────────────────────────────────────────────────
+const connects=[[0,2],[2,3],[1,4],[4,7],[3,6],[0,5],[6,9],[5,10],[7,8],[1,6]];
+const strCols=[0xff2222,0xff6600,0xcc0000,0xff4400,0xdd1111,0xff3300];
+connects.forEach(([a,b],i)=>{
+  const pa=positions[a],pb=positions[b];
+  const pts=[
+    new THREE.Vector3(pa[0],pa[1]-0.15,-3.875),
+    new THREE.Vector3((pa[0]+pb[0])/2,(pa[1]+pb[1])/2-0.08,-3.875),
+    new THREE.Vector3(pb[0],pb[1]-0.15,-3.875)
+  ];
+  const curve=new THREE.QuadraticBezierCurve3(...pts);
+  const geo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(20));
+  scene.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color:strCols[i%6],opacity:0.85,transparent:true})));
+});
+
+// ── DESK ──────────────────────────────────────────────────────────────────
+B(2.2,0.06,0.9,0x2a1f0e, 1.5,0.82,2);
+[[0.45,1.6],[2.55,1.6],[0.45,2.4],[2.55,2.4]].forEach(([x,z])=>B(0.06,0.82,0.06,0x1a1208,x,0.41,z));
+B(0.35,0.04,0.28,0xe8e0cc,0.7,0.87,2.1);
+B(0.35,0.04,0.28,0xd4ccb8,0.72,0.91,2.08);
+B(0.35,0.04,0.28,0xc8c0a8,0.69,0.95,2.12);
+// Monitor
+B(0.45,0.35,0.35,0xccccaa,1.5,1.0,1.72);
+B(0.35,0.28,0.02,0x001400,1.5,1.02,1.535);
+(()=>{
+  const c=document.createElement('canvas');c.width=256;c.height=192;
+  const x=c.getContext('2d');
+  x.fillStyle='#001400';x.fillRect(0,0,256,192);
+  x.fillStyle='#00ff41';x.font='12px Courier New';
+  ['FBI DATABASE','> ACCESS GRANTED','> SEARCHING...','','CLASSIFIED'].forEach((t,i)=>x.fillText(t,10,28+i*22));
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.27),
+    bas(0xffffff,{map:new THREE.CanvasTexture(c)}));
+  m.position.set(1.5,1.02,1.528);scene.add(m);
+})();
+C(0.02,0.5,0x888888,1.5,1.07,1.65,6);
+new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),bas(0xffee99,{color:0xffee99}));
+C(0.04,0.1,0x1a1a1a,2.1,0.87,2.2,8);
+// Chair
+C(0.22,0.04,0x111111,1.5,0.48,2.9,12);
+C(0.03,0.44,0x444444,1.5,0.24,2.9);
+B(0.44,0.44,0.06,0x111111,1.5,0.68,3.1);
+
+// ── FILING CABINETS ───────────────────────────────────────────────────────
+B(0.55,1.3,0.5,0x4a4a44,-3.8,0.65,-2);
+B(0.55,1.3,0.5,0x4a4a44,-3.8,0.65,-0.8);
+[[-2,0.9],[-2,0.55],[-0.8,0.9],[-0.8,0.55]].forEach(([z,y])=>B(0.15,0.02,0.02,0x888888,-3.53,y,z));
+
+// ── BOOKSHELF ─────────────────────────────────────────────────────────────
+B(1.2,1.8,0.3,0x2a1a08,4.4,0.9,1);
+[0x8b0000,0x003366,0x2d4a00,0x4a3000,0x660033,0x1a1a44,0x442200,0x003322].forEach((c,i)=>{
+  B(0.07+Math.random()*0.04,0.26+Math.random()*0.1,0.22,c,4.05+i*0.148,1.16+Math.random()*0.04,1);
+});
+
+// ── I WANT TO BELIEVE POSTER ──────────────────────────────────────────────
+B(0.8,1.1,0.02,0x000011,-3.49,1.9,-2.8,Math.PI/2);
+const ufoMesh=new THREE.Mesh(new THREE.SphereGeometry(0.18,12,6),lam(0x6644cc,{emissive:new THREE.Color(0x221188)}));
+ufoMesh.scale.set(1.8,0.4,0.9);ufoMesh.position.set(-3.49,2.05,-2.8);ufoMesh.rotation.y=Math.PI/2;scene.add(ufoMesh);
+(()=>{
+  const c=document.createElement('canvas');c.width=256;c.height=48;
+  const x=c.getContext('2d');x.fillStyle='#fff';x.font='bold 16px Courier New';x.textAlign='center';
+  x.fillText('I WANT TO BELIEVE',128,32);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.72,0.16),bas(0xffffff,{map:new THREE.CanvasTexture(c),transparent:true}));
+  m.position.set(-3.49,1.48,-2.8);m.rotation.y=Math.PI/2;scene.add(m);
+})();
+
+// ── CAMPFIRE ──────────────────────────────────────────────────────────────
+C(0.25,0.05,0x2a1505,2,0.025,2,10);
+const fireMesh=new THREE.Mesh(new THREE.ConeGeometry(0.18,0.38,8),
+  lam(0xff6600,{transparent:true,opacity:0.9,emissive:new THREE.Color(0xcc2200)}));
+fireMesh.position.set(2,0.22,2);scene.add(fireMesh);
+
+// ── FLUORESCENT TUBES ─────────────────────────────────────────────────────
+[-2,2].forEach(x=>B(1.4,0.05,0.1,bas(0xccffcc),x,2.98,0));
+
+// ── CONTROLS ──────────────────────────────────────────────────────────────
+const keys={};let mx=false,pitch=0,yaw=0;
+
+document.getElementById('startBtn').onclick=()=>{
+  document.getElementById('overlay').style.display='none';
+  renderer.domElement.requestPointerLock();
+};
+document.addEventListener('pointerlockchange',()=>{ mx=!!document.pointerLockElement; });
+document.addEventListener('keydown',e=>keys[e.code]=true);
+document.addEventListener('keyup',  e=>keys[e.code]=false);
+document.addEventListener('mousemove',e=>{
+  if(!mx)return;
+  yaw  -=e.movementX*0.002;
+  pitch =Math.max(-1.4,Math.min(1.4,pitch-e.movementY*0.002));
+});
+
+// Click to open card
+const ray=new THREE.Raycaster();
+document.addEventListener('click',()=>{
+  if(!mx)return;
+  ray.setFromCamera(new THREE.Vector2(0,0),camera);
+  const hits=ray.intersectObjects(cardMeshes);
+  if(hits.length){openPanel(hits[0].object.userData.caseIndex);}
+});
+document.addEventListener('keydown',e=>{ if(e.code==='Escape')closePanel(); });
+
+function openPanel(i){
+  const c=CASES[i];
+  document.getElementById('cp-cls').textContent='⚠ '+c.cls+' ⚠';
+  document.getElementById('cp-id').textContent=c.id;
+  document.getElementById('cp-ttl').textContent=c.title;
+  document.getElementById('cp-sum').textContent=c.sum;
+  document.getElementById('case-panel').style.display='block';
+  document.exitPointerLock();mx=false;
+}
+function closePanel(){
+  document.getElementById('case-panel').style.display='none';
+  renderer.domElement.requestPointerLock();
+}
+
+// ── LOOP ──────────────────────────────────────────────────────────────────
+const clock=new THREE.Clock();
+const fwd=new THREE.Vector3(),rgt=new THREE.Vector3(),mov=new THREE.Vector3();
+
+(function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05);
+  const t=clock.getElapsedTime();
+
+  camera.rotation.order='YXZ';
+  camera.rotation.y=yaw;
+  camera.rotation.x=pitch;
+
+  if(mx){
+    fwd.set(Math.sin(yaw),0,Math.cos(yaw));
+    rgt.set(Math.cos(yaw),0,-Math.sin(yaw));
+    mov.set(0,0,0);
+    if(keys['KeyW']||keys['ArrowUp'])    mov.sub(fwd);
+    if(keys['KeyS']||keys['ArrowDown'])  mov.add(fwd);
+    if(keys['KeyA']||keys['ArrowLeft'])  mov.sub(rgt);
+    if(keys['KeyD']||keys['ArrowRight']) mov.add(rgt);
+    if(mov.lengthSq()>0){
+      mov.normalize().multiplyScalar(3.5*dt);
+      camera.position.addScaledVector(mov,1);
+      camera.position.x=Math.max(-4.5,Math.min(4.5,camera.position.x));
+      camera.position.z=Math.max(-3.5,Math.min(3.8,camera.position.z));
+      camera.position.y=1.6;
+    }
+  }
+
+  // Animations
+  ufoMesh.position.y=2.05+Math.sin(t*1.1)*0.05;
+  fireMesh.scale.set(0.9+Math.sin(t*9)*0.12,1+Math.sin(t*11)*0.15,0.9+Math.cos(t*7)*0.1);
+  flickerLight.intensity=2.2+Math.sin(t*57)*0.12+Math.sin(t*93)*0.06;
+
+  renderer.render(scene,camera);
+})();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
 });
 </script>
-
-<a-scene
-  vr-mode-ui="enabled: true"
-  renderer="antialias: true; colorManagement: false"
-  background="color: #1a1008"
-  loading-screen="enabled: false"
-  id="scene"
->
-
-  <!-- ─── ASSETS ─────────────────────────────────────────────────────────── -->
-  <a-assets>
-    <!-- Generate procedural textures via canvas -->
-    <canvas id="floor-canvas" width="512" height="512"></canvas>
-    <canvas id="wall-canvas" width="512" height="512"></canvas>
-    <canvas id="cork-canvas" width="1024" height="768"></canvas>
-    <canvas id="desk-canvas" width="256" height="256"></canvas>
-    <canvas id="poster-canvas" width="256" height="384"></canvas>
-  </a-assets>
-
-  <!-- ─── CAMERA RIG ─────────────────────────────────────────────────────── -->
-  <a-entity id="rig" position="0 0 3">
-    <a-entity
-      id="camera"
-      camera="fov: 75; near: 0.1"
-      look-controls="pointerLockEnabled: false"
-      wasd-controls="enabled: true; acceleration: 10"
-      position="0 1.6 0"
-    >
-      <!-- Gaze cursor for non-VR -->
-      <a-entity
-        cursor="fuse: false; rayOrigin: mouse"
-        raycaster="objects: .interactive; far: 10"
-        geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-        material="color: #00ff41; shader: flat; opacity: 0.8"
-        position="0 0 -1"
-      ></a-entity>
-    </a-entity>
-
-    <!-- Left Controller -->
-    <a-entity
-      id="left-ctrl"
-      oculus-touch-controls="hand: left"
-      teleport-controls="cameraRig: #rig; teleportOrigin: #camera; button: thumbstick; curveColor: #00ff41; landingNormal: 0 1 0; landingMaxAngle: 45; hitCylinderColor: #00ff41"
-    ></a-entity>
-
-    <!-- Right Controller — raycaster for interaction -->
-    <a-entity
-      id="right-ctrl"
-      oculus-touch-controls="hand: right"
-      raycaster="objects: .interactive; far: 8; showLine: true; lineColor: #00ff41; lineOpacity: 0.5"
-      laser-controls="hand: right"
-    ></a-entity>
-  </a-entity>
-
-  <!-- ─── ROOM GEOMETRY ──────────────────────────────────────────────────── -->
-
-  <!-- Floor — worn linoleum -->
-  <a-plane
-    id="floor"
-    rotation="-90 0 0"
-    width="10" height="12"
-    material="color: #2a2015; roughness: 1; metalness: 0"
-    position="0 0 0"
-  ></a-plane>
-
-  <!-- Ceiling -->
-  <a-plane
-    rotation="90 0 0"
-    width="10" height="12"
-    material="color: #1a1a1a; roughness: 1"
-    position="0 3 0"
-  ></a-plane>
-
-  <!-- Back wall — corkboard wall -->
-  <a-plane
-    width="9" height="3.2"
-    material="color: #3d2c14; roughness: 0.9"
-    position="0 1.6 -4"
-  ></a-plane>
-
-  <!-- Left wall -->
-  <a-plane
-    rotation="0 90 0"
-    width="12" height="3.2"
-    material="color: #382a12; roughness: 1"
-    position="-5 1.6 0"
-  ></a-plane>
-
-  <!-- Right wall -->
-  <a-plane
-    rotation="0 -90 0"
-    width="12" height="3.2"
-    material="color: #382a12; roughness: 1"
-    position="5 1.6 0"
-  ></a-plane>
-
-  <!-- Front wall -->
-  <a-plane
-    rotation="0 180 0"
-    width="10" height="3.2"
-    material="color: #382a12; roughness: 1"
-    position="0 1.6 5"
-  ></a-plane>
-
-  <!-- ─── CORKBOARD ──────────────────────────────────────────────────────── -->
-  <!-- Cork surface -->
-  <a-plane
-    id="corkboard"
-    width="8" height="2.8"
-    position="0 1.7 -3.95"
-    material="color: #8B6914; roughness: 1; metalness: 0"
-  ></a-plane>
-
-  <!-- Cork texture overlay (darker spots) -->
-  <a-plane
-    width="8" height="2.8"
-    position="0 1.7 -3.94"
-    material="color: #6B4F0E; roughness: 1; opacity: 0.3; transparent: true"
-  ></a-plane>
-
-  <!-- Corkboard frame -->
-  <a-box width="8.2" height="0.12" depth="0.08" position="0 3.06 -3.92" material="color: #3a2800; roughness: 0.8"></a-box>
-  <a-box width="8.2" height="0.12" depth="0.08" position="0 0.34 -3.92" material="color: #3a2800; roughness: 0.8"></a-box>
-  <a-box width="0.12" height="2.8" depth="0.08" position="-4.06 1.7 -3.92" material="color: #3a2800; roughness: 0.8"></a-box>
-  <a-box width="0.12" height="2.8" depth="0.08" position="4.06 1.7 -3.92" material="color: #3a2800; roughness: 0.8"></a-box>
-
-  <!-- ─── FLUORESCENT LIGHTS ─────────────────────────────────────────────── -->
-  <!-- Strong ambient so room is always visible -->
-  <a-entity light="type: ambient; color: #887766; intensity: 2.5"></a-entity>
-  <!-- Main overhead -->
-  <a-entity light="type: point; color: #ccddcc; intensity: 2.0; distance: 12; decay: 1" position="0 2.9 0"></a-entity>
-  <a-entity light="type: point; color: #cce0cc; intensity: 1.5; distance: 10; decay: 1" position="-2 2.9 -2"></a-entity>
-  <a-entity light="type: point; color: #cce0cc; intensity: 1.5; distance: 10; decay: 1" position="2 2.9 2"></a-entity>
-  <!-- Desk lamp warm glow -->
-  <a-entity light="type: point; color: #ffdd88; intensity: 2.0; distance: 5; decay: 1" position="1.5 1.3 1.8"></a-entity>
-  <!-- Corkboard spotlight -->
-  <a-entity light="type: point; color: #ffe8cc; intensity: 2.0; distance: 8; decay: 1" position="0 2.8 -2"></a-entity>
-
-  <!-- Fluorescent tube geometry (ceiling) -->
-  <a-box width="1.5" height="0.06" depth="0.12" position="-2 2.98 0" material="color: #ccffcc; emissive: #88cc88; emissiveIntensity: 0.4"></a-box>
-  <a-box width="1.5" height="0.06" depth="0.12" position="2 2.98 0" material="color: #ccffcc; emissive: #88cc88; emissiveIntensity: 0.4"></a-box>
-
-  <!-- ─── MULDER'S DESK ──────────────────────────────────────────────────── -->
-  <!-- Desk surface -->
-  <a-box width="2.2" height="0.06" depth="0.9" position="1.5 0.82 2" material="color: #2a1f0e; roughness: 0.7; metalness: 0.1"></a-box>
-  <!-- Desk legs -->
-  <a-box width="0.06" height="0.82" depth="0.06" position="0.45 0.41 1.6" material="color: #1a1208"></a-box>
-  <a-box width="0.06" height="0.82" depth="0.06" position="2.55 0.41 1.6" material="color: #1a1208"></a-box>
-  <a-box width="0.06" height="0.82" depth="0.06" position="0.45 0.41 2.4" material="color: #1a1208"></a-box>
-  <a-box width="0.06" height="0.82" depth="0.06" position="2.55 0.41 2.4" material="color: #1a1208"></a-box>
-
-  <!-- Desk lamp -->
-  <a-cylinder height="0.5" radius="0.02" position="1.5 1.07 1.65" material="color: #888; metalness: 0.8; roughness: 0.2"></a-cylinder>
-  <a-sphere radius="0.08" position="1.5 1.32 1.65" material="color: #ffee99; emissive: #ffdd44; emissiveIntensity: 0.8"></a-sphere>
-
-  <!-- Stacked files on desk -->
-  <a-box width="0.35" height="0.04" depth="0.28" position="0.7 0.87 2.1" material="color: #e8e0cc"></a-box>
-  <a-box width="0.35" height="0.04" depth="0.28" position="0.72 0.91 2.08" material="color: #d4ccb8" rotation="0 3 0"></a-box>
-  <a-box width="0.35" height="0.04" depth="0.28" position="0.69 0.95 2.12" material="color: #c8c0a8" rotation="0 -2 0"></a-box>
-
-  <!-- Coffee mug (FBI mug) -->
-  <a-cylinder height="0.1" radius="0.04" position="2.1 0.87 2.2" material="color: #1a1a1a; roughness: 0.6"></a-cylinder>
-  <a-torus radius="0.05" radius-tubular="0.008" rotation="90 0 0" position="2.145 0.87 2.2" material="color: #1a1a1a"></a-torus>
-
-  <!-- Old CRT monitor -->
-  <a-box width="0.45" height="0.35" depth="0.35" position="1.5 1.0 1.72" material="color: #ccccaa; roughness: 0.6"></a-box>
-  <a-plane width="0.35" height="0.28" position="1.5 1.02 1.54" material="color: #001100; emissive: #003300; emissiveIntensity: 0.5"></a-plane>
-  <!-- Monitor text glow -->
-  <a-text value="FBI DATABASE&#10;> ACCESS GRANTED&#10;> SEARCHING...&#10;&#10;CLASSIFIED" color="#00ff41" width="0.8" position="1.5 1.02 1.535" align="center" font="monoid" wrap-count="18"></a-text>
-
-  <!-- Desk chair -->
-  <a-cylinder height="0.04" radius="0.22" position="1.5 0.48 2.9" material="color: #111; roughness: 0.8"></a-cylinder>
-  <a-cylinder height="0.44" radius="0.03" position="1.5 0.24 2.9" material="color: #444"></a-cylinder>
-  <a-box width="0.44" height="0.44" depth="0.06" position="1.5 0.68 3.1" material="color: #111; roughness: 0.8"></a-box>
-
-  <!-- ─── FILING CABINETS ─────────────────────────────────────────────────── -->
-  <a-box width="0.55" height="1.3" depth="0.5" position="-3.8 0.65 -2" material="color: #4a4a44; roughness: 0.5; metalness: 0.4"></a-box>
-  <a-box width="0.55" height="1.3" depth="0.5" position="-3.8 0.65 -0.8" material="color: #4a4a44; roughness: 0.5; metalness: 0.4"></a-box>
-  <!-- Drawer handles -->
-  <a-box width="0.15" height="0.02" depth="0.02" position="-3.54 0.9 -2" material="color: #888; metalness: 0.9"></a-box>
-  <a-box width="0.15" height="0.02" depth="0.02" position="-3.54 0.55 -2" material="color: #888; metalness: 0.9"></a-box>
-  <a-box width="0.15" height="0.02" depth="0.02" position="-3.54 0.9 -0.8" material="color: #888; metalness: 0.9"></a-box>
-  <a-box width="0.15" height="0.02" depth="0.02" position="-3.54 0.55 -0.8" material="color: #888; metalness: 0.9"></a-box>
-
-  <!-- ─── "I WANT TO BELIEVE" POSTER ─────────────────────────────────────── -->
-  <a-plane width="0.8" height="1.1" position="-3.5 1.9 -2.8" rotation="0 90 0" material="color: #000011">
-  </a-plane>
-  <!-- UFO silhouette (approximated) -->
-  <a-sphere radius="0.1" scale="2 0.4 1" position="-3.49 2.0 -2.8" rotation="0 90 0" material="color: #8866ff; emissive: #4433aa; emissiveIntensity: 0.6" segments-height="8" segments-width="16"></a-sphere>
-  <!-- Beam of light -->
-  <a-cone height="0.6" radius-bottom="0.18" radius-top="0.04" position="-3.49 1.72 -2.8" rotation="0 90 0" material="color: #ffffff; opacity: 0.15; transparent: true"></a-cone>
-  <!-- Poster text -->
-  <a-text value="I WANT TO BELIEVE" color="#ffffff" width="1.2" position="-3.48 1.45 -2.8" rotation="0 90 0" align="center" font="mozillavr"></a-text>
-
-  <!-- ─── BOOKSHELF ───────────────────────────────────────────────────────── -->
-  <a-box width="1.2" height="1.8" depth="0.3" position="4.4 0.9 1" material="color: #2a1a08; roughness: 0.8"></a-box>
-  <!-- Shelf planks -->
-  <a-box width="1.16" height="0.03" depth="0.28" position="4.4 0.4 1" material="color: #2a1a08"></a-box>
-  <a-box width="1.16" height="0.03" depth="0.28" position="4.4 0.9 1" material="color: #2a1a08"></a-box>
-  <a-box width="1.16" height="0.03" depth="0.28" position="4.4 1.4 1" material="color: #2a1a08"></a-box>
-  <!-- Books (colored spines) -->
-  <a-box width="0.06" height="0.28" depth="0.22" position="4.05 1.16 1" material="color: #8b0000"></a-box>
-  <a-box width="0.08" height="0.32" depth="0.22" position="4.12 1.18 1" material="color: #003366"></a-box>
-  <a-box width="0.07" height="0.26" depth="0.22" position="4.20 1.15 1" material="color: #2d4a00"></a-box>
-  <a-box width="0.06" height="0.30" depth="0.22" position="4.27 1.17 1" material="color: #4a3000"></a-box>
-  <a-box width="0.09" height="0.28" depth="0.22" position="4.36 1.16 1" material="color: #660033"></a-box>
-  <a-box width="0.07" height="0.35" depth="0.22" position="4.46 1.195 1" material="color: #1a1a44"></a-box>
-  <a-box width="0.06" height="0.25" depth="0.22" position="4.54 1.145 1" material="color: #442200"></a-box>
-  <a-box width="0.08" height="0.29" depth="0.22" position="4.62 1.165 1" material="color: #003322"></a-box>
-  <a-box width="0.06" height="0.27" depth="0.22" position="4.70 1.155 1" material="color: #660000"></a-box>
-
-  <!-- ─── SCATTERED PAPERS ON FLOOR ──────────────────────────────────────── -->
-  <a-plane width="0.3" height="0.22" rotation="-90 15 0" position="-0.5 0.01 1.5" material="color: #e8e0cc; opacity: 0.9; transparent: true"></a-plane>
-  <a-plane width="0.3" height="0.22" rotation="-90 -8 0" position="0.3 0.01 2.5" material="color: #ddd8c0; opacity: 0.9; transparent: true"></a-plane>
-  <a-plane width="0.28" height="0.2" rotation="-90 22 0" position="-1.2 0.01 2" material="color: #e0d8c8; opacity: 0.9; transparent: true"></a-plane>
-
-  <!-- ─── CASE FILE CARDS ON CORKBOARD ───────────────────────────────────── -->
-  <!-- Generated by JavaScript below -->
-  <a-entity id="corkboard-cards"></a-entity>
-
-  <!-- ─── CARD READER PANEL (floats when card selected) ─────────────────── -->
-  <a-entity id="card-reader" visible="false" position="0 1.7 -1.5">
-    <!-- Background panel -->
-    <a-plane width="1.4" height="1.0" material="color: #0a0f0a; opacity: 0.95; transparent: true; side: double"></a-plane>
-    <!-- Green border -->
-    <a-plane width="1.42" height="1.02" material="color: #00ff41; opacity: 0.3; transparent: true; side: double" position="0 0 -0.001"></a-plane>
-    <!-- FBI header bar -->
-    <a-plane width="1.4" height="0.12" position="0 0.44 0.001" material="color: #003300; opacity: 0.95; transparent: true"></a-plane>
-    <a-text id="card-header" value="FEDERAL BUREAU OF INVESTIGATION" color="#00ff41" width="2.2" position="0 0.44 0.002" align="center" font="monoid"></a-text>
-    <!-- Classification badge -->
-    <a-text id="card-class" value="CLASSIFIED" color="#ff3333" width="1.6" position="0 0.32 0.001" align="center" font="monoid"></a-text>
-    <!-- Case ID -->
-    <a-text id="card-id" value="X-FILE #0000" color="#88ff88" width="1.4" position="-0.6 0.22 0.001" align="left" font="monoid"></a-text>
-    <!-- Case Title -->
-    <a-text id="card-title" value="TITLE" color="#ffffff" width="1.8" position="0 0.1 0.001" align="center" font="monoid"></a-text>
-    <!-- Divider -->
-    <a-plane width="1.3" height="0.005" position="0 0.04 0.001" material="color: #00ff41; opacity: 0.5; transparent: true"></a-plane>
-    <!-- Summary text -->
-    <a-text id="card-summary" value="summary" color="#aaffaa" width="1.5" position="-0.62 -0.04 0.001" align="left" font="monoid" wrap-count="42" baseline="top"></a-text>
-    <!-- Close instruction -->
-    <a-text value="[ TRIGGER TO CLOSE ]" color="#005500" width="1.0" position="0 -0.44 0.001" align="center" font="monoid"></a-text>
-  </a-entity>
-
-  <!-- ─── TITLE TEXT ON CORKBOARD ────────────────────────────────────────── -->
-  <a-text
-    value="THE X-FILES — CLASSIFIED CASE BOARD"
-    color="#cc9900"
-    width="5.5"
-    position="0 2.95 -3.85"
-    align="center"
-    font="monoid"
-  ></a-text>
-  <a-text
-    value="F.B.I. SPECIAL AGENT FOX MULDER • BASEMENT OFFICE"
-    color="#664400"
-    width="3.8"
-    position="0 2.78 -3.85"
-    align="center"
-    font="monoid"
-  ></a-text>
-
-  <!-- ─── AMBIENT PARTICLE (floating dust) ──────────────────────────────── -->
-  <!-- Small floating spheres for atmosphere -->
-  <a-sphere radius="0.005" position="0.5 1.8 -2" material="color: #ffdd88; emissive: #ffcc44; emissiveIntensity: 0.3; opacity: 0.5; transparent: true"
-    animation="property: position; to: 0.6 2.1 -2.1; dur: 6000; dir: alternate; easing: easeInOutSine; loop: true"></a-sphere>
-  <a-sphere radius="0.004" position="-1 1.5 -1" material="color: #ffdd88; emissive: #ffcc44; emissiveIntensity: 0.3; opacity: 0.4; transparent: true"
-    animation="property: position; to: -0.9 1.9 -1.2; dur: 8000; dir: alternate; easing: easeInOutSine; loop: true"></a-sphere>
-  <a-sphere radius="0.003" position="1.5 1.2 -3" material="color: #aaddff; emissive: #88bbff; emissiveIntensity: 0.4; opacity: 0.3; transparent: true"
-    animation="property: position; to: 1.6 1.6 -2.8; dur: 7000; dir: alternate; easing: easeInOutSine; loop: true"></a-sphere>
-
-</a-scene>
-
-<script>
-// ─── BUILD CORKBOARD CARDS ────────────────────────────────────────────────────
-const scene = document.querySelector('a-scene');
-
-scene.addEventListener('loaded', () => {
-  buildCorkboard();
-  setupInteraction();
-  setupAudio();
-});
-
-function buildCorkboard() {
-  const container = document.getElementById('corkboard-cards');
-  const boardW = 7.6;  // usable board width
-  const boardH = 2.4;  // usable board height
-  const boardZ = -3.88;
-  const boardCenterX = 0;
-  const boardCenterY = 1.7;
-
-  // Pre-defined positions spread across the board
-  const positions = [
-    [-3.2, 2.5], [-1.6, 2.6], [0.1, 2.7], [1.8, 2.5], [3.1, 2.4],
-    [-3.0, 1.8], [-1.0, 1.7], [0.8, 1.9], [2.5, 1.8], [3.2, 1.5],
-    [-2.0, 1.1]
-  ];
-
-  const strings = [];
-
-  CASES.forEach((c, i) => {
-    const px = positions[i][0];
-    const py = positions[i][1];
-    const pz = boardZ + 0.02;
-    const rot = (Math.random() - 0.5) * 8; // slight random tilt
-
-    // Card entity
-    const card = document.createElement('a-entity');
-    card.setAttribute('class', 'interactive case-card');
-    card.setAttribute('position', `${px} ${py} ${pz}`);
-    card.setAttribute('rotation', `0 0 ${rot}`);
-    card.dataset.caseIndex = i;
-
-    // Card background (aged paper)
-    const bg = document.createElement('a-plane');
-    bg.setAttribute('width', '0.52');
-    bg.setAttribute('height', '0.36');
-    bg.setAttribute('material', 'color: #f0e8cc; roughness: 1; side: double');
-    card.appendChild(bg);
-
-    // Aged paper texture line
-    const line1 = document.createElement('a-plane');
-    line1.setAttribute('width', '0.48');
-    line1.setAttribute('height', '0.003');
-    line1.setAttribute('position', '0 0.1 0.001');
-    line1.setAttribute('material', 'color: #ccbbaa; opacity: 0.4; transparent: true');
-    card.appendChild(line1);
-
-    // Classification stamp (red diagonal text feel)
-    const stamp = document.createElement('a-text');
-    stamp.setAttribute('value', 'CLASSIFIED');
-    stamp.setAttribute('color', '#cc0000');
-    stamp.setAttribute('width', '0.9');
-    stamp.setAttribute('position', '0 0.12 0.002');
-    stamp.setAttribute('align', 'center');
-    stamp.setAttribute('rotation', '0 0 -12');
-    stamp.setAttribute('font', 'monoid');
-    card.appendChild(stamp);
-
-    // Case ID
-    const caseId = document.createElement('a-text');
-    caseId.setAttribute('value', c.id);
-    caseId.setAttribute('color', '#333333');
-    caseId.setAttribute('width', '0.8');
-    caseId.setAttribute('position', '-0.22 0.14 0.003');
-    caseId.setAttribute('align', 'left');
-    caseId.setAttribute('font', 'monoid');
-    card.appendChild(caseId);
-
-    // Case title
-    const title = document.createElement('a-text');
-    title.setAttribute('value', c.title.length > 20 ? c.title.substring(0,18)+'..' : c.title);
-    title.setAttribute('color', '#111111');
-    title.setAttribute('width', '1.1');
-    title.setAttribute('position', '0 0.04 0.003');
-    title.setAttribute('align', 'center');
-    title.setAttribute('font', 'monoid');
-    card.appendChild(title);
-
-    // Classification type
-    const classif = document.createElement('a-text');
-    classif.setAttribute('value', c.classification.length > 22 ? c.classification.substring(0,20)+'..' : c.classification);
-    classif.setAttribute('color', '#555500');
-    classif.setAttribute('width', '0.85');
-    classif.setAttribute('position', '0 -0.05 0.003');
-    classif.setAttribute('align', 'center');
-    classif.setAttribute('font', 'monoid');
-    card.appendChild(classif);
-
-    // Photo placeholder (dark rectangle suggesting evidence photo)
-    const photo = document.createElement('a-plane');
-    photo.setAttribute('width', '0.14');
-    photo.setAttribute('height', '0.10');
-    photo.setAttribute('position', '-0.16 -0.13 0.002');
-    photo.setAttribute('material', `color: ${['#1a1a2a','#1a2a1a','#2a1a1a','#1a1a1a'][i%4]}; roughness: 1`);
-    card.appendChild(photo);
-
-    // Subtitle
-    const sub = document.createElement('a-text');
-    sub.setAttribute('value', c.subtitle);
-    sub.setAttribute('color', '#666633');
-    sub.setAttribute('width', '0.7');
-    sub.setAttribute('position', '0.04 -0.12 0.003');
-    sub.setAttribute('align', 'left');
-    sub.setAttribute('font', 'monoid');
-    card.appendChild(sub);
-
-    // Hover glow plane (initially invisible)
-    const glow = document.createElement('a-plane');
-    glow.setAttribute('class', 'card-glow');
-    glow.setAttribute('width', '0.56');
-    glow.setAttribute('height', '0.40');
-    glow.setAttribute('position', '0 0 -0.002');
-    glow.setAttribute('material', `color: ${c.string}; opacity: 0; transparent: true; side: double`);
-    card.appendChild(glow);
-
-    // Thumbtack pin (top center)
-    const pin = document.createElement('a-sphere');
-    pin.setAttribute('radius', '0.012');
-    pin.setAttribute('position', `0 0.2 0.015`);
-    pin.setAttribute('material', `color: ${PIN_COLORS[i % PIN_COLORS.length]}; roughness: 0.3; metalness: 0.7`);
-    card.appendChild(pin);
-
-    container.appendChild(card);
-    strings.push({ from: [px, py - 0.18], index: i });
-  });
-
-  // ─── RED STRINGS ─────────────────────────────────────────────────────────
-  // Connect some cards with red string lines
-  const connections = [
-    [0, 2], [2, 3], [1, 4], [4, 7], [3, 6], [0, 5],
-    [6, 9], [5, 10], [7, 8], [1, 6], [3, 9], [2, 10]
-  ];
-
-  connections.forEach(([a, b]) => {
-    const pa = positions[a];
-    const pb = positions[b];
-    const midX = (pa[0] + pb[0]) / 2;
-    const midY = (pa[1] + pb[1]) / 2;
-    const dx = pb[0] - pa[0];
-    const dy = pb[1] - pa[1];
-    const length = Math.sqrt(dx*dx + dy*dy);
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    const stringColor = CASES[a].string;
-
-    const line = document.createElement('a-box');
-    line.setAttribute('width', length.toFixed(3));
-    line.setAttribute('height', '0.004');
-    line.setAttribute('depth', '0.003');
-    line.setAttribute('position', `${midX} ${midY} ${boardZ + 0.035}`);
-    line.setAttribute('rotation', `0 0 ${angle}`);
-    line.setAttribute('material', `color: ${stringColor}; roughness: 1; opacity: 0.85; transparent: true`);
-    container.appendChild(line);
-  });
-}
-
-// ─── CARD INTERACTION ─────────────────────────────────────────────────────────
-function setupInteraction() {
-  const cardReader = document.getElementById('card-reader');
-  const cardHeader = document.getElementById('card-header');
-  const cardClass = document.getElementById('card-class');
-  const cardId = document.getElementById('card-id');
-  const cardTitle = document.getElementById('card-title');
-  const cardSummary = document.getElementById('card-summary');
-
-  let readerOpen = false;
-  let lastHovered = null;
-
-  // Mouse / gaze hover
-  document.querySelectorAll('.case-card').forEach(card => {
-    card.addEventListener('mouseenter', () => highlightCard(card, true));
-    card.addEventListener('mouseleave', () => highlightCard(card, false));
-    card.addEventListener('click', () => openCard(card));
-  });
-
-  // VR controller interaction (raycaster hit)
-  const scene = document.querySelector('a-scene');
-  scene.addEventListener('click', (e) => {
-    const target = e.detail?.intersection?.object?.el;
-    if (!target) return;
-    const card = target.closest ? target.closest('.case-card') : target.parentEl;
-    if (card && card.classList.contains('case-card')) {
-      openCard(card);
-    }
-    if (readerOpen) {
-      // close on trigger when reader open
-      closeReader();
-    }
-  });
-
-  function highlightCard(card, on) {
-    const glow = card.querySelector('.card-glow');
-    if (glow) glow.setAttribute('material', `color: ${CASES[card.dataset.caseIndex].string}; opacity: ${on ? 0.35 : 0}; transparent: true; side: double`);
-    card.setAttribute('scale', on ? '1.05 1.05 1.05' : '1 1 1');
-  }
-
-  function openCard(card) {
-    if (readerOpen) { closeReader(); return; }
-    const c = CASES[parseInt(card.dataset.caseIndex)];
-    if (!c) return;
-
-    cardId.setAttribute('value', c.id);
-    cardTitle.setAttribute('value', c.title);
-    cardClass.setAttribute('value', '⚠ ' + c.classification + ' ⚠');
-    cardSummary.setAttribute('value', c.summary);
-
-    // Position reader in front of camera
-    const cam = document.getElementById('camera');
-    const camPos = cam.getAttribute('position');
-    const rigPos = document.getElementById('rig').getAttribute('position');
-    cardReader.setAttribute('position', `${rigPos.x} ${camPos.y + rigPos.y} ${rigPos.z - 1.5}`);
-
-    cardReader.setAttribute('visible', 'true');
-    cardReader.setAttribute('animation', 'property: scale; from: 0.1 0.1 0.1; to: 1 1 1; dur: 200; easing: easeOutBack');
-    readerOpen = true;
-  }
-
-  function closeReader() {
-    cardReader.setAttribute('animation', 'property: scale; from: 1 1 1; to: 0.01 0.01 0.01; dur: 150; easing: easeInBack');
-    setTimeout(() => cardReader.setAttribute('visible', 'false'), 150);
-    readerOpen = false;
-  }
-
-  // Keyboard close
-  document.addEventListener('keydown', (e) => {
-    if ((e.key === 'Escape' || e.key === 'e') && readerOpen) closeReader();
-  });
-}
-
-// ─── AMBIENT AUDIO (Web Audio API) ────────────────────────────────────────────
-function setupAudio() {
-  let audioCtx = null;
-  let started = false;
-
-  function startAmbient() {
-    if (started) return;
-    started = true;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Eerie drone
-    function playDrone(freq, gain, duration) {
-      const osc = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      osc.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(gain, audioCtx.currentTime + 2);
-      gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration - 1);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    }
-
-    // Play layered eerie drones
-    function ambientLoop() {
-      playDrone(55, 0.03, 12);
-      playDrone(82.4, 0.02, 10);
-      playDrone(110, 0.015, 8);
-      setTimeout(ambientLoop, 9000);
-    }
-    ambientLoop();
-
-    // Occasional static crackle
-    function crackle() {
-      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      const g = audioCtx.createGain();
-      g.gain.value = 0.08;
-      src.connect(g);
-      g.connect(audioCtx.destination);
-      src.start();
-      setTimeout(crackle, 3000 + Math.random() * 8000);
-    }
-    setTimeout(crackle, 2000);
-  }
-
-  // Start audio on first interaction
-  document.addEventListener('click', startAmbient, { once: true });
-  document.addEventListener('keydown', startAmbient, { once: true });
-}
-
-// ─── FLOOR GRID EFFECT ────────────────────────────────────────────────────────
-// Adds subtle green grid lines to the floor for that FBI basement feel
-const scene2 = document.querySelector('a-scene');
-scene2.addEventListener('loaded', () => {
-  for (let x = -4; x <= 4; x += 1) {
-    const line = document.createElement('a-box');
-    line.setAttribute('width', '0.008');
-    line.setAttribute('height', '0.002');
-    line.setAttribute('depth', '12');
-    line.setAttribute('position', `${x} 0.002 0`);
-    line.setAttribute('material', 'color: #003300; opacity: 0.3; transparent: true');
-    scene2.appendChild(line);
-  }
-  for (let z = -5; z <= 5; z += 1) {
-    const line = document.createElement('a-box');
-    line.setAttribute('width', '10');
-    line.setAttribute('height', '0.002');
-    line.setAttribute('depth', '0.008');
-    line.setAttribute('position', `0 0.002 ${z}`);
-    line.setAttribute('material', 'color: #003300; opacity: 0.3; transparent: true');
-    scene2.appendChild(line);
-  }
-});
-</script>
-
 </body>
 </html>
