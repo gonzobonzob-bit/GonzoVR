@@ -157,8 +157,8 @@
 <!-- ═══════════════════════════════════════════════════════ A-FRAME SCENE ═══ -->
 <a-scene
   vr-mode-ui="enabled:true"
-  renderer="antialias:true; colorManagement:true; physicallyCorrectLights:true; logarithmicDepthBuffer:true"
-  background="color:#0d0805"
+  renderer="antialias:true; colorManagement:false"
+  background="color:#1a0d08"
   loading-screen="enabled:false"
   id="main-scene"
 >
@@ -196,23 +196,23 @@
   </a-entity>
 
   <!-- ── LIGHTING ── -->
-  <a-entity light="type:ambient; color:#1a0d05; intensity:2"></a-entity>
-  <!-- Sunset directional -->
-  <a-entity light="type:directional; color:#ff6620; intensity:1.2; castShadow:false"
+  <a-entity light="type:ambient; color:#886644; intensity:3.0"></a-entity>
+  <!-- Sunset directional - strong -->
+  <a-entity light="type:directional; color:#ff8833; intensity:2.0; castShadow:false"
     position="-3 2 -5"></a-entity>
-  <!-- Moonlight fill -->
-  <a-entity light="type:directional; color:#3355aa; intensity:0.3"
+  <!-- Fill light -->
+  <a-entity light="type:directional; color:#6677aa; intensity:1.0"
     position="2 4 2"></a-entity>
   <!-- Fort lantern glows -->
-  <a-entity light="type:point; color:#ffcc44; intensity:1.5; distance:8; decay:2" position="0 3.5 0"></a-entity>
-  <a-entity light="type:point; color:#ff8822; intensity:0.8; distance:5; decay:2" position="-6 2 0"></a-entity>
-  <a-entity light="type:point; color:#ff8822; intensity:0.8; distance:5; decay:2" position="6 2 0"></a-entity>
+  <a-entity light="type:point; color:#ffcc44; intensity:2.5; distance:12; decay:1" position="0 3.5 0"></a-entity>
+  <a-entity light="type:point; color:#ff8822; intensity:1.5; distance:8; decay:1" position="-6 2 0"></a-entity>
+  <a-entity light="type:point; color:#ff8822; intensity:1.5; distance:8; decay:1" position="6 2 0"></a-entity>
 
   <!-- ── TERRAIN ── -->
   <!-- Vast dusty ground plane -->
   <a-plane id="ground-plane" class="placeable"
     rotation="-90 0 0" width="120" height="120"
-    material="color:#2d1505; roughness:1; metalness:0"
+    material="color:#4a2a10; roughness:1; metalness:0"
     position="0 0 0"
   ></a-plane>
 
