@@ -1,381 +1,311 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>X-FILES: THE TRUTH IS OUT THERE</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<title>X-FILES VR</title>
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
-canvas { display:block; }
-#overlay {
-  position:fixed; inset:0;
-  background:#000; color:#00ff41; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; z-index:100;
-}
-#overlay h1 { font-size:42px; letter-spacing:8px; text-shadow:0 0 20px #00ff41; margin-bottom:16px; }
-#overlay p { font-size:12px; letter-spacing:4px; color:#005500; margin:4px 0; }
-#overlay .start-btn {
-  margin-top:30px; padding:14px 40px;
-  background:transparent; border:1px solid #00ff41; color:#00ff41;
-  font-family:'Courier New',monospace; font-size:13px; letter-spacing:4px;
-  cursor:pointer;
-}
-#overlay .start-btn:hover { background:rgba(0,255,65,0.1); }
-#hud {
-  position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-  color:#00ff41; font-size:10px; letter-spacing:2px; text-align:center;
-  pointer-events:none; z-index:50;
-  background:rgba(0,0,0,0.7); padding:7px 16px; border:1px solid #003300;
-  white-space:nowrap;
-}
-#case-panel {
-  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:500px; max-width:92vw;
-  background:rgba(3,8,3,0.97); border:1px solid #00ff41;
-  padding:28px; z-index:200; display:none;
-}
-#case-panel .cp-hdr { font-size:9px; letter-spacing:5px; color:#00ff41; margin-bottom:10px; }
-#case-panel .cp-cls { font-size:11px; color:#ff3333; margin-bottom:10px; letter-spacing:3px; }
-#case-panel .cp-id  { font-size:11px; color:#88ff88; margin-bottom:4px; }
-#case-panel .cp-ttl { font-size:22px; color:#fff; letter-spacing:2px; margin-bottom:14px; }
-#case-panel .cp-div { height:1px; background:#003300; margin-bottom:14px; }
-#case-panel .cp-sum { font-size:12px; color:#aaffaa; line-height:1.9; margin-bottom:18px; }
-#case-panel .cp-cls2{ font-size:10px; letter-spacing:3px; color:#005500; text-align:center; cursor:pointer; }
-#case-panel .cp-cls2:hover { color:#00ff41; }
-#xhair {
-  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-  pointer-events:none; z-index:50; width:14px; height:14px;
-}
-#xhair::before,#xhair::after{content:'';position:absolute;background:#00ff4188;}
-#xhair::before{width:14px;height:1px;top:6px;left:0;}
-#xhair::after{width:1px;height:14px;top:0;left:6px;}
+body{margin:0;background:#000;}
+#info{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  color:#00ff41;font-family:'Courier New',monospace;font-size:11px;
+  letter-spacing:2px;background:rgba(0,0,0,0.7);padding:8px 16px;
+  border:1px solid #003300;pointer-events:none;z-index:100;text-align:center;}
+#panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:480px;max-width:92vw;background:rgba(3,10,3,0.97);
+  border:2px solid #00ff41;padding:24px;display:none;z-index:200;
+  font-family:'Courier New',monospace;color:#aaffaa;}
+#panel h2{color:#fff;font-size:18px;letter-spacing:2px;margin:8px 0;}
+#panel .cid{color:#88ff88;font-size:11px;margin-bottom:4px;}
+#panel .cls{color:#ff3333;font-size:11px;margin-bottom:12px;letter-spacing:2px;}
+#panel p{font-size:12px;line-height:1.8;margin-bottom:16px;}
+#panel button{background:transparent;border:1px solid #00ff41;color:#00ff41;
+  font-family:'Courier New',monospace;font-size:11px;letter-spacing:3px;
+  padding:10px 24px;cursor:pointer;width:100%;}
 </style>
 </head>
 <body>
+<div id="info">LEFT STICK = MOVE &nbsp;·&nbsp; RIGHT STICK = TURN &nbsp;·&nbsp; LOOK AT CARD + RIGHT TRIGGER = READ</div>
 
-<div id="overlay">
-  <h1>X-FILES</h1>
-  <p>FEDERAL BUREAU OF INVESTIGATION</p>
-  <p>CLASSIFIED: EYES ONLY</p>
-  <p style="margin-top:8px">SPECIAL AGENT FOX MULDER · BASEMENT OFFICE</p>
-  <button class="start-btn" id="startBtn">▶ ENTER BASEMENT</button>
-</div>
-
-<div id="xhair"></div>
-<div id="hud">WASD = MOVE &nbsp;·&nbsp; MOUSE = LOOK &nbsp;·&nbsp; CLICK CARDS TO READ &nbsp;·&nbsp; ESC = CLOSE</div>
-
-<div id="case-panel">
-  <div class="cp-hdr">FEDERAL BUREAU OF INVESTIGATION — CLASSIFIED FILE</div>
-  <div class="cp-cls" id="cp-cls"></div>
-  <div class="cp-id"  id="cp-id"></div>
-  <div class="cp-ttl" id="cp-ttl"></div>
-  <div class="cp-div"></div>
-  <div class="cp-sum" id="cp-sum"></div>
-  <div class="cp-cls2" onclick="closePanel()">[ CLICK TO CLOSE FILE ]</div>
+<div id="panel">
+  <div class="cid" id="p-id"></div>
+  <div class="cls" id="p-cls"></div>
+  <h2 id="p-title"></h2>
+  <div style="height:1px;background:#003300;margin:8px 0 12px"></div>
+  <p id="p-sum"></p>
+  <button onclick="closePanel()">[ CLOSE FILE ]</button>
 </div>
 
 <script>
-// ── CASE DATA ──────────────────────────────────────────────────────────────
 const CASES=[
-  {id:"X-File 1013",title:"EUGENE VICTOR TOOMS",cls:"UNNATURAL BIOLOGY",sub:"Case 1.03/1.21",col:0xff3333,
-   sum:"Subject possesses retractable skeletal structure allowing ingress through small apertures. Hibernates 30-year cycles. Harvests human livers for sustenance. Kill count: 5 per cycle dating back to 1903. DO NOT ENGAGE ALONE."},
-  {id:"X-File 1214",title:"THE FLUKEMAN",cls:"PARASITIC ENTITY",sub:"Case 2.02",col:0xff6600,
-   sum:"Humanoid fluke worm mutation. Origin: Chernobyl sewage runoff via Black Sea shipping vessel. Reproduces via larvae deposited in human hosts through bite. Believed destroyed — remains unconfirmed. Chernobyl connection suppressed by DOD."},
-  {id:"X-File 0467",title:"BLACK OIL",cls:"EXTRATERRESTRIAL PATHOGEN",sub:"Piper Maru / Apocrypha",col:0x9900cc,
-   sum:"Sentient alien organism transmitted through ocular contact. Capable of full host possession. Found in downed WWII aircraft — Pacific theater. Connected to Syndicate colonization agenda. THE ALIEN OIL IS THE KEY."},
-  {id:"X-File 7777",title:"COLONIZATION",cls:"CONSPIRACY / EXTRATERRESTRIAL",sub:"MYTHOLOGY ARC",col:0x00cc44,
-   sum:"Planned alien colonization of Earth. Syndicate collaborated since Roswell 1947. Smallpox genome catalogued for compatibility testing. Bees used as vectors. Black cancer = advance scout organism. Rebel alien resistance exists."},
-  {id:"X-File 2231",title:"DUANE BARRY / ASCENSION",cls:"ABDUCTION",sub:"Case 2.05-2.06",col:0xff3333,
-   sum:"Former FBI agent reported repeated alien abductions. Metallic implants found — non-terrestrial origin confirmed by Scully. Barry abducted Scully from her apartment. Scully missing 84 days. NO OFFICIAL EXPLANATION."},
-  {id:"X-File 3301",title:"PUSHER — ROBERT MODELL",cls:"PSI PHENOMENON",sub:"Case 3.17",col:0xffcc00,
-   sum:"Subject demonstrated ability to impose his will through spoken word — victims complied fatally. Caused multiple suicides via phone calls. Low-grade brain tumor believed source of abilities. Mulder resisted psionic control during confrontation."},
-  {id:"X-File 5512",title:"HOME",cls:"HUMAN ABERRATION",sub:"Case 4.02",col:0xcc0000,
-   sum:"Peaceville, PA. Peacock family — severely inbred across multiple generations. Quadruple amputee matriarch concealed beneath floorboards. One infant corpse recovered from field. Peacocks fled — LOCATION UNKNOWN. File sealed by Skinner."},
-  {id:"X-File 6601",title:"THE SMOKING MAN",cls:"CLASSIFIED — DO NOT DISTRIBUTE",sub:"C.G.B. SPENDER",col:0x9900cc,
-   sum:"Known alias: Cancer Man. Orchestrator of UFO crash cover-ups since 1952. Involvement in JFK assassination suspected. Controls DOD and CIA black budgets. Syndicate connection confirmed. Present at Mulder's father's death. MOTIVE UNKNOWN."},
-  {id:"X-File 9002",title:"JOSE CHUNG'S FROM OUTER SPACE",cls:"CONFLICTING ACCOUNTS",sub:"Case 3.20",col:0x00aaff,
-   sum:"Three witnesses. Three entirely different abduction accounts. Men in Black involvement — one confirmed NOT human. Air Force hypnotic regression used on civilians. Lord Kinbote referenced by unconnected sources. Truth: indeterminate."},
-  {id:"X-File 0001",title:"PILOT — BELLEFLEUR, OREGON",cls:"INITIAL X-FILE",sub:"Case 1.01",col:0xffcc00,
-   sum:"First documented case. Four teens found dead — radiation burns and anomalous implants. Nine minutes of missing time experienced by Mulder and Scully. Evidence incinerated by unknown party. This case opened the X-Files."},
-  {id:"X-File 4400",title:"SAMANTHA MULDER",cls:"PERSONAL / UNRESOLVED",sub:"ONGOING",col:0xff3333,
-   sum:"Sister of Agent Fox Mulder. Abducted November 27, 1973 at age 8. Government used her as leverage against Bill Mulder. Multiple Samantha clones terminated. Walk-ins theory: soul taken to spare further experimentation. CASE REMAINS OPEN."},
+  {id:"X-File 1013",title:"EUGENE VICTOR TOOMS",cls:"UNNATURAL BIOLOGY",
+   sum:"Subject possesses retractable skeletal structure. Hibernates 30-year cycles harvesting human livers. Kill count: 5 per cycle since 1903. DO NOT ENGAGE ALONE."},
+  {id:"X-File 1214",title:"THE FLUKEMAN",cls:"PARASITIC ENTITY",
+   sum:"Humanoid fluke worm mutation from Chernobyl sewage. Reproduces via larvae deposited through bite. Believed destroyed — unconfirmed. Connection suppressed by DOD."},
+  {id:"X-File 0467",title:"BLACK OIL",cls:"EXTRATERRESTRIAL PATHOGEN",
+   sum:"Sentient alien organism. Transmitted via ocular contact, full host possession. Found in downed WWII aircraft. Connected to Syndicate colonization agenda."},
+  {id:"X-File 7777",title:"COLONIZATION",cls:"CONSPIRACY / EXTRATERRESTRIAL",
+   sum:"Planned alien colonization. Syndicate collaborated since Roswell 1947. Smallpox genome catalogued for compatibility. Bees as vectors. Rebel alien resistance exists."},
+  {id:"X-File 2231",title:"DUANE BARRY",cls:"ABDUCTION",
+   sum:"Former FBI agent. Repeated alien abductions confirmed. Metallic implants — non-terrestrial origin. Barry abducted Scully. Missing 84 days. NO OFFICIAL EXPLANATION."},
+  {id:"X-File 3301",title:"PUSHER",cls:"PSI PHENOMENON",
+   sum:"Robert Modell imposed will through spoken word — victims complied fatally. Brain tumor source of abilities. Mulder resisted psionic control during confrontation."},
+  {id:"X-File 5512",title:"HOME",cls:"HUMAN ABERRATION",
+   sum:"Peacock family, Peaceville PA. Severely inbred. Amputee matriarch under floorboards. Infant corpse recovered. Peacocks fled — LOCATION UNKNOWN. File sealed."},
+  {id:"X-File 6601",title:"THE SMOKING MAN",cls:"CLASSIFIED",
+   sum:"Cancer Man. UFO cover-ups since 1952. JFK assassination suspected. Controls DOD and CIA black budgets. Present at Mulder's father's death. MOTIVE UNKNOWN."},
+  {id:"X-File 0001",title:"PILOT — BELLEFLEUR",cls:"INITIAL X-FILE",
+   sum:"First case. Four teens dead — radiation burns, anomalous implants. Nine minutes missing time. Evidence incinerated by unknown party. This case opened the X-Files."},
+  {id:"X-File 4400",title:"SAMANTHA MULDER",cls:"PERSONAL / UNRESOLVED",
+   sum:"Mulder's sister. Abducted November 27 1973, age 8. Government used her as leverage. Multiple clones terminated. Walk-ins theory. CASE REMAINS OPEN."},
+  {id:"X-File 9002",title:"JOSE CHUNG",cls:"CONFLICTING ACCOUNTS",
+   sum:"Three witnesses. Three different abduction accounts. Men in Black — one NOT human. Lord Kinbote referenced by unconnected sources. Truth: indeterminate."},
 ];
-
-// ── RENDERER ──────────────────────────────────────────────────────────────
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth,innerHeight);
-renderer.outputEncoding=THREE.LinearEncoding;
-document.body.appendChild(renderer.domElement);
-
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x1a1208);
-scene.fog=new THREE.FogExp2(0x0d0a06,0.06);
-
-const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,0.05,60);
-camera.position.set(0,1.6,3);
-
-// ── LIGHTS ────────────────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0x998866,2.0));
-const L=(c,i,d,x,y,z)=>{const l=new THREE.PointLight(c,i,d);l.position.set(x,y,z);scene.add(l);return l;};
-L(0xccddaa,3.0,16, 0,2.8,0);
-L(0xbbcc99,2.0,10,-2,2.8,-1);
-L(0xffdd88,2.5,7,  1.5,1.3,1.8);
-L(0xffeecc,3.0,10, 0,2.6,-2);
-L(0xff8822,2.0,5,  2,0.5,2);
-const flickerLight=L(0xccddaa,2.5,14, 0,2.8,0);
-
-// ── GEOMETRY HELPERS ──────────────────────────────────────────────────────
-const lam=(c,opts={})=>new THREE.MeshLambertMaterial({color:c,...opts});
-const bas=(c,opts={})=>new THREE.MeshBasicMaterial({color:c,...opts});
-
-function B(w,h,d,mat,x,y,z,ry=0){
-  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
-    typeof mat==='number'?lam(mat):mat);
-  m.position.set(x,y,z); m.rotation.y=ry; scene.add(m); return m;
-}
-function C(r,h,mat,x,y,z,s=12){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),
-    typeof mat==='number'?lam(mat):mat);
-  m.position.set(x,y,z); scene.add(m); return m;
-}
-function P(w,h,mat,x,y,z,rx=-Math.PI/2,ry=0){
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
-    typeof mat==='number'?lam(mat,{side:THREE.DoubleSide}):mat);
-  m.position.set(x,y,z); m.rotation.set(rx,ry,0); scene.add(m); return m;
-}
-
-// ── ROOM ──────────────────────────────────────────────────────────────────
-P(10,12,0x2a1f0e, 0,0,0);           // floor
-B(10,0.05,12,0x1c1812, 0,3.02,0);   // ceiling
-B(10,3.1,0.08,0x3d2c18, 0,1.55,-4.04); // back wall
-B(10,3.1,0.08,0x352a15, 0,1.55,4.04);  // front wall
-B(0.08,3.1,12,0x302615,-5.04,1.55,0);  // left wall
-B(0.08,3.1,12,0x302615, 5.04,1.55,0);  // right wall
-// Floor planks
-for(let i=-4.5;i<5;i+=0.7)B(10,0.005,0.03,0x1a1005,0,0.005,i);
-
-// ── CORKBOARD ─────────────────────────────────────────────────────────────
-B(8.2,2.8,0.06,0x9B7924, 0,1.7,-3.97);
-B(8.4,0.12,0.1,0x3a2800, 0,3.06,-3.95);
-B(8.4,0.12,0.1,0x3a2800, 0,0.34,-3.95);
-B(0.12,2.8,0.1,0x3a2800,-4.14,1.7,-3.95);
-B(0.12,2.8,0.1,0x3a2800, 4.14,1.7,-3.95);
-
-// ── BOARD TITLE ───────────────────────────────────────────────────────────
-(()=>{
-  const c=document.createElement('canvas');c.width=1024;c.height=56;
-  const x=c.getContext('2d');
-  x.fillStyle='#cc9900';x.font='bold 26px Courier New';x.textAlign='center';
-  x.fillText('THE X-FILES — CLASSIFIED CASE BOARD',512,38);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(6.5,0.35),
-    bas(0xffffff,{map:new THREE.CanvasTexture(c),transparent:true}));
-  m.position.set(0,3.08,-3.9);scene.add(m);
-})();
-
-// ── CASE CARDS ────────────────────────────────────────────────────────────
-const cardMeshes=[];
-const positions=[
-  [-3.2,2.55],[-1.6,2.6],[0.1,2.65],[1.8,2.55],[3.1,2.5],
-  [-3.0,1.8],[-1.0,1.75],[0.8,1.85],[2.5,1.8],
-  [-2.0,1.1],[0.5,1.05]
-];
-const pinPalette=[0xff2222,0xffdd00,0xff6600,0x22ffaa,0xff22cc,0x2288ff];
-
-CASES.forEach((c,i)=>{
-  const [px,py]=positions[i];
-  const rot=(Math.random()-0.5)*0.12;
-
-  // Card canvas texture
-  const cv=document.createElement('canvas');cv.width=256;cv.height=180;
-  const cx=cv.getContext('2d');
-  cx.fillStyle='#ede5c8';cx.fillRect(0,0,256,180);
-  cx.strokeStyle='#ccc0a0';cx.lineWidth=0.8;
-  for(let l=28;l<180;l+=18){cx.beginPath();cx.moveTo(8,l);cx.lineTo(248,l);cx.stroke();}
-  cx.save();cx.globalAlpha=0.3;cx.fillStyle='#cc0000';
-  cx.font='bold 20px Courier New';cx.translate(128,90);cx.rotate(-0.22);
-  cx.fillText('CLASSIFIED',−60,0);cx.restore();
-  cx.fillStyle='#555';cx.font='10px Courier New';cx.fillText(c.id,10,20);
-  cx.fillStyle='#111';cx.font='bold 12px Courier New';
-  cx.fillText(c.title.length>20?c.title.slice(0,18)+'..':c.title,10,46);
-  cx.fillStyle='#556600';cx.font='9px Courier New';
-  cx.fillText(c.cls.length>26?c.cls.slice(0,24)+'..':c.cls,10,62);
-  cx.fillStyle='#1a1a2a';cx.fillRect(10,74,68,52);
-  cx.fillStyle='#664400';cx.font='9px Courier New';cx.fillText(c.sub,86,96);
-
-  const mat=bas(0xffffff,{map:new THREE.CanvasTexture(cv),transparent:false});
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.37,0.018),mat);
-  mesh.position.set(px,py,-3.88);
-  mesh.rotation.z=rot;
-  mesh.userData={caseIndex:i};
-  scene.add(mesh);
-  cardMeshes.push(mesh);
-
-  // Pin
-  const pin=new THREE.Mesh(new THREE.SphereGeometry(0.018,8,8),
-    lam(pinPalette[i%pinPalette.length]));
-  pin.position.set(px,py+0.205,-3.865);
-  scene.add(pin);
-});
-
-// ── STRINGS ───────────────────────────────────────────────────────────────
-const connects=[[0,2],[2,3],[1,4],[4,7],[3,6],[0,5],[6,9],[5,10],[7,8],[1,6]];
-const strCols=[0xff2222,0xff6600,0xcc0000,0xff4400,0xdd1111,0xff3300];
-connects.forEach(([a,b],i)=>{
-  const pa=positions[a],pb=positions[b];
-  const pts=[
-    new THREE.Vector3(pa[0],pa[1]-0.15,-3.875),
-    new THREE.Vector3((pa[0]+pb[0])/2,(pa[1]+pb[1])/2-0.08,-3.875),
-    new THREE.Vector3(pb[0],pb[1]-0.15,-3.875)
-  ];
-  const curve=new THREE.QuadraticBezierCurve3(...pts);
-  const geo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(20));
-  scene.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color:strCols[i%6],opacity:0.85,transparent:true})));
-});
-
-// ── DESK ──────────────────────────────────────────────────────────────────
-B(2.2,0.06,0.9,0x2a1f0e, 1.5,0.82,2);
-[[0.45,1.6],[2.55,1.6],[0.45,2.4],[2.55,2.4]].forEach(([x,z])=>B(0.06,0.82,0.06,0x1a1208,x,0.41,z));
-B(0.35,0.04,0.28,0xe8e0cc,0.7,0.87,2.1);
-B(0.35,0.04,0.28,0xd4ccb8,0.72,0.91,2.08);
-B(0.35,0.04,0.28,0xc8c0a8,0.69,0.95,2.12);
-// Monitor
-B(0.45,0.35,0.35,0xccccaa,1.5,1.0,1.72);
-B(0.35,0.28,0.02,0x001400,1.5,1.02,1.535);
-(()=>{
-  const c=document.createElement('canvas');c.width=256;c.height=192;
-  const x=c.getContext('2d');
-  x.fillStyle='#001400';x.fillRect(0,0,256,192);
-  x.fillStyle='#00ff41';x.font='12px Courier New';
-  ['FBI DATABASE','> ACCESS GRANTED','> SEARCHING...','','CLASSIFIED'].forEach((t,i)=>x.fillText(t,10,28+i*22));
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.27),
-    bas(0xffffff,{map:new THREE.CanvasTexture(c)}));
-  m.position.set(1.5,1.02,1.528);scene.add(m);
-})();
-C(0.02,0.5,0x888888,1.5,1.07,1.65,6);
-new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),bas(0xffee99,{color:0xffee99}));
-C(0.04,0.1,0x1a1a1a,2.1,0.87,2.2,8);
-// Chair
-C(0.22,0.04,0x111111,1.5,0.48,2.9,12);
-C(0.03,0.44,0x444444,1.5,0.24,2.9);
-B(0.44,0.44,0.06,0x111111,1.5,0.68,3.1);
-
-// ── FILING CABINETS ───────────────────────────────────────────────────────
-B(0.55,1.3,0.5,0x4a4a44,-3.8,0.65,-2);
-B(0.55,1.3,0.5,0x4a4a44,-3.8,0.65,-0.8);
-[[-2,0.9],[-2,0.55],[-0.8,0.9],[-0.8,0.55]].forEach(([z,y])=>B(0.15,0.02,0.02,0x888888,-3.53,y,z));
-
-// ── BOOKSHELF ─────────────────────────────────────────────────────────────
-B(1.2,1.8,0.3,0x2a1a08,4.4,0.9,1);
-[0x8b0000,0x003366,0x2d4a00,0x4a3000,0x660033,0x1a1a44,0x442200,0x003322].forEach((c,i)=>{
-  B(0.07+Math.random()*0.04,0.26+Math.random()*0.1,0.22,c,4.05+i*0.148,1.16+Math.random()*0.04,1);
-});
-
-// ── I WANT TO BELIEVE POSTER ──────────────────────────────────────────────
-B(0.8,1.1,0.02,0x000011,-3.49,1.9,-2.8,Math.PI/2);
-const ufoMesh=new THREE.Mesh(new THREE.SphereGeometry(0.18,12,6),lam(0x6644cc,{emissive:new THREE.Color(0x221188)}));
-ufoMesh.scale.set(1.8,0.4,0.9);ufoMesh.position.set(-3.49,2.05,-2.8);ufoMesh.rotation.y=Math.PI/2;scene.add(ufoMesh);
-(()=>{
-  const c=document.createElement('canvas');c.width=256;c.height=48;
-  const x=c.getContext('2d');x.fillStyle='#fff';x.font='bold 16px Courier New';x.textAlign='center';
-  x.fillText('I WANT TO BELIEVE',128,32);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.72,0.16),bas(0xffffff,{map:new THREE.CanvasTexture(c),transparent:true}));
-  m.position.set(-3.49,1.48,-2.8);m.rotation.y=Math.PI/2;scene.add(m);
-})();
-
-// ── CAMPFIRE ──────────────────────────────────────────────────────────────
-C(0.25,0.05,0x2a1505,2,0.025,2,10);
-const fireMesh=new THREE.Mesh(new THREE.ConeGeometry(0.18,0.38,8),
-  lam(0xff6600,{transparent:true,opacity:0.9,emissive:new THREE.Color(0xcc2200)}));
-fireMesh.position.set(2,0.22,2);scene.add(fireMesh);
-
-// ── FLUORESCENT TUBES ─────────────────────────────────────────────────────
-[-2,2].forEach(x=>B(1.4,0.05,0.1,bas(0xccffcc),x,2.98,0));
-
-// ── CONTROLS ──────────────────────────────────────────────────────────────
-const keys={};let mx=false,pitch=0,yaw=0;
-
-document.getElementById('startBtn').onclick=()=>{
-  document.getElementById('overlay').style.display='none';
-  renderer.domElement.requestPointerLock();
-};
-document.addEventListener('pointerlockchange',()=>{ mx=!!document.pointerLockElement; });
-document.addEventListener('keydown',e=>keys[e.code]=true);
-document.addEventListener('keyup',  e=>keys[e.code]=false);
-document.addEventListener('mousemove',e=>{
-  if(!mx)return;
-  yaw  -=e.movementX*0.002;
-  pitch =Math.max(-1.4,Math.min(1.4,pitch-e.movementY*0.002));
-});
-
-// Click to open card
-const ray=new THREE.Raycaster();
-document.addEventListener('click',()=>{
-  if(!mx)return;
-  ray.setFromCamera(new THREE.Vector2(0,0),camera);
-  const hits=ray.intersectObjects(cardMeshes);
-  if(hits.length){openPanel(hits[0].object.userData.caseIndex);}
-});
-document.addEventListener('keydown',e=>{ if(e.code==='Escape')closePanel(); });
 
 function openPanel(i){
   const c=CASES[i];
-  document.getElementById('cp-cls').textContent='⚠ '+c.cls+' ⚠';
-  document.getElementById('cp-id').textContent=c.id;
-  document.getElementById('cp-ttl').textContent=c.title;
-  document.getElementById('cp-sum').textContent=c.sum;
-  document.getElementById('case-panel').style.display='block';
-  document.exitPointerLock();mx=false;
+  document.getElementById('p-id').textContent=c.id;
+  document.getElementById('p-cls').textContent='⚠ '+c.cls+' ⚠';
+  document.getElementById('p-title').textContent=c.title;
+  document.getElementById('p-sum').textContent=c.sum;
+  document.getElementById('panel').style.display='block';
 }
-function closePanel(){
-  document.getElementById('case-panel').style.display='none';
-  renderer.domElement.requestPointerLock();
-}
+function closePanel(){document.getElementById('panel').style.display='none';}
+window.openCase=openPanel;
+</script>
 
-// ── LOOP ──────────────────────────────────────────────────────────────────
-const clock=new THREE.Clock();
-const fwd=new THREE.Vector3(),rgt=new THREE.Vector3(),mov=new THREE.Vector3();
+<a-scene
+  background="color:#2a1f0e"
+  renderer="antialias:true"
+  vr-mode-ui="enabled:true"
+  loading-screen="backgroundColor:#000;dotsColor:#00ff41"
+>
 
-(function animate(){
-  requestAnimationFrame(animate);
-  const dt=Math.min(clock.getDelta(),0.05);
-  const t=clock.getElapsedTime();
+  <!-- LIGHTS — bright so everything renders -->
+  <a-light type="ambient" color="#ccaa88" intensity="1.2"></a-light>
+  <a-light type="point" color="#ffeecc" intensity="2" distance="15" position="0 2.8 0"></a-light>
+  <a-light type="point" color="#ffeecc" intensity="1.5" distance="10" position="0 2.8 -2"></a-light>
+  <a-light type="point" color="#ffdd88" intensity="2" distance="6" position="1.5 1.3 2"></a-light>
 
-  camera.rotation.order='YXZ';
-  camera.rotation.y=yaw;
-  camera.rotation.x=pitch;
+  <!-- CAMERA RIG with thumbstick movement -->
+  <a-entity id="rig" position="0 0 3">
+    <a-camera look-controls="pointerLockEnabled:false" wasd-controls="enabled:false" position="0 1.6 0">
+      <!-- Gaze reticle -->
+      <a-entity cursor="fuse:false"
+        raycaster="objects:.card;far:8"
+        geometry="primitive:ring;radiusInner:0.012;radiusOuter:0.018"
+        material="color:#00ff41;shader:flat;opacity:0.9"
+        position="0 0 -1">
+      </a-entity>
+    </a-camera>
 
-  if(mx){
-    fwd.set(Math.sin(yaw),0,Math.cos(yaw));
-    rgt.set(Math.cos(yaw),0,-Math.sin(yaw));
-    mov.set(0,0,0);
-    if(keys['KeyW']||keys['ArrowUp'])    mov.sub(fwd);
-    if(keys['KeyS']||keys['ArrowDown'])  mov.add(fwd);
-    if(keys['KeyA']||keys['ArrowLeft'])  mov.sub(rgt);
-    if(keys['KeyD']||keys['ArrowRight']) mov.add(rgt);
-    if(mov.lengthSq()>0){
-      mov.normalize().multiplyScalar(3.5*dt);
-      camera.position.addScaledVector(mov,1);
-      camera.position.x=Math.max(-4.5,Math.min(4.5,camera.position.x));
-      camera.position.z=Math.max(-3.5,Math.min(3.8,camera.position.z));
-      camera.position.y=1.6;
-    }
+    <!-- Left controller — movement -->
+    <a-entity id="lhand"
+      oculus-touch-controls="hand:left"
+      thumbstick-move>
+    </a-entity>
+
+    <!-- Right controller — laser pointer for cards -->
+    <a-entity id="rhand"
+      oculus-touch-controls="hand:right"
+      laser-controls="hand:right"
+      raycaster="objects:.card;far:8;showLine:true;lineColor:#00ff41;lineOpacity:0.6">
+    </a-entity>
+  </a-entity>
+
+  <!-- FLOOR -->
+  <a-plane rotation="-90 0 0" width="10" height="12" color="#2a1a08" position="0 0 0"></a-plane>
+  <!-- Ceiling -->
+  <a-plane rotation="90 0 0" width="10" height="12" color="#1e1810" position="0 3 0"></a-plane>
+  <!-- Walls -->
+  <a-plane width="10" height="3" color="#3d2c18" position="0 1.5 -4.05"></a-plane>
+  <a-plane width="10" height="3" color="#352a15" rotation="0 180 0" position="0 1.5 4.05"></a-plane>
+  <a-plane width="12" height="3" color="#302615" rotation="0 90 0" position="-5.05 1.5 0"></a-plane>
+  <a-plane width="12" height="3" color="#302615" rotation="0 -90 0" position="5.05 1.5 0"></a-plane>
+
+  <!-- CORKBOARD -->
+  <a-box width="8.2" height="2.8" depth="0.06" color="#9B7924" position="0 1.7 -3.97"></a-box>
+  <!-- Frame -->
+  <a-box width="8.5" height="0.1" depth="0.1" color="#3a2800" position="0 3.06 -3.95"></a-box>
+  <a-box width="8.5" height="0.1" depth="0.1" color="#3a2800" position="0 0.34 -3.95"></a-box>
+  <a-box width="0.1" height="2.8" depth="0.1" color="#3a2800" position="-4.2 1.7 -3.95"></a-box>
+  <a-box width="0.1" height="2.8" depth="0.1" color="#3a2800" position="4.2 1.7 -3.95"></a-box>
+
+  <!-- BOARD TITLE -->
+  <a-text value="X-FILES — CLASSIFIED CASE BOARD" color="#cc9900" width="5" position="0 3.1 -3.88" align="center" font="monoid"></a-text>
+  <a-text value="F.B.I. SPECIAL AGENT FOX MULDER" color="#664400" width="3.5" position="0 2.82 -3.88" align="center" font="monoid"></a-text>
+
+  <!-- CASE CARDS — 11 cards on the board -->
+  <!-- Row 1 -->
+  <a-entity class="card" position="-3.2 2.55 -3.86" rotation="0 0 3" onclick="openCase(0)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 1013&#10;TOOMS&#10;UNNATURAL BIO" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#ff2222" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="-1.6 2.6 -3.86" rotation="0 0 -2" onclick="openCase(1)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 1214&#10;FLUKEMAN&#10;PARASITIC" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#ffdd00" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="0.1 2.65 -3.86" rotation="0 0 1" onclick="openCase(2)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 0467&#10;BLACK OIL&#10;ALIEN PATHOGEN" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#9900cc" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="1.8 2.55 -3.86" rotation="0 0 -3" onclick="openCase(3)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 7777&#10;COLONIZATION&#10;CONSPIRACY" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#00cc44" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="3.1 2.5 -3.86" rotation="0 0 2" onclick="openCase(4)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 2231&#10;DUANE BARRY&#10;ABDUCTION" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#ff3333" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <!-- Row 2 -->
+  <a-entity class="card" position="-3.0 1.8 -3.86" rotation="0 0 -2" onclick="openCase(5)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 3301&#10;PUSHER&#10;PSI PHENOMENON" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#ffcc00" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="-1.0 1.75 -3.86" rotation="0 0 3" onclick="openCase(6)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 5512&#10;HOME&#10;ABERRATION" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#cc0000" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="0.8 1.85 -3.86" rotation="0 0 -1" onclick="openCase(7)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 6601&#10;SMOKING MAN&#10;CLASSIFIED" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#9900cc" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="2.5 1.8 -3.86" rotation="0 0 2" onclick="openCase(8)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 0001&#10;PILOT&#10;INITIAL FILE" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#ffcc00" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <!-- Row 3 -->
+  <a-entity class="card" position="-2.0 1.1 -3.86" rotation="0 0 -3" onclick="openCase(9)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 4400&#10;SAMANTHA&#10;UNRESOLVED" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#ff3333" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <a-entity class="card" position="0.5 1.05 -3.86" rotation="0 0 2" onclick="openCase(10)">
+    <a-plane width="0.52" height="0.37" color="#ede5c8"></a-plane>
+    <a-text value="X-File 9002&#10;JOSE CHUNG&#10;CONFLICTING" color="#111" width="0.9" position="0 0.02 0.01" align="center" font="monoid" wrap-count="16"></a-text>
+    <a-text value="CLASSIFIED" color="#cc0000" width="0.7" position="0 0.05 0.012" rotation="0 0 -15" font="monoid" align="center" opacity="0.3"></a-text>
+    <a-sphere radius="0.015" color="#00aaff" position="0 0.2 0.02"></a-sphere>
+  </a-entity>
+
+  <!-- RED STRINGS connecting cards -->
+  <a-entity line="start:-3.2 2.37 -3.87;end:0.1 2.47 -3.87;color:#ff2222;opacity:0.7"></a-entity>
+  <a-entity line="start:0.1 2.47 -3.87;end:1.8 2.37 -3.87;color:#ff6600;opacity:0.7"></a-entity>
+  <a-entity line="start:-1.6 2.42 -3.87;end:3.1 2.32 -3.87;color:#cc0000;opacity:0.7"></a-entity>
+  <a-entity line="start:3.1 2.32 -3.87;end:0.8 1.67 -3.87;color:#ff4400;opacity:0.7"></a-entity>
+  <a-entity line="start:1.8 2.37 -3.87;end:-1.0 1.57 -3.87;color:#dd1111;opacity:0.7"></a-entity>
+  <a-entity line="start:-3.2 2.37 -3.87;end:-3.0 1.62 -3.87;color:#ff2222;opacity:0.7"></a-entity>
+  <a-entity line="start:-1.0 1.57 -3.87;end:-2.0 0.92 -3.87;color:#cc0000;opacity:0.7"></a-entity>
+  <a-entity line="start:-3.0 1.62 -3.87;end:0.5 0.87 -3.87;color:#ff3300;opacity:0.7"></a-entity>
+  <a-entity line="start:0.8 1.67 -3.87;end:2.5 1.62 -3.87;color:#ff2222;opacity:0.7"></a-entity>
+  <a-entity line="start:-1.6 2.42 -3.87;end:-1.0 1.57 -3.87;color:#ff6600;opacity:0.7"></a-entity>
+
+  <!-- DESK -->
+  <a-box width="2.2" height="0.06" depth="0.9" color="#2a1f0e" position="1.5 0.82 2"></a-box>
+  <a-box width="0.06" height="0.82" depth="0.06" color="#1a1208" position="0.45 0.41 1.6"></a-box>
+  <a-box width="0.06" height="0.82" depth="0.06" color="#1a1208" position="2.55 0.41 1.6"></a-box>
+  <a-box width="0.06" height="0.82" depth="0.06" color="#1a1208" position="0.45 0.41 2.4"></a-box>
+  <a-box width="0.06" height="0.82" depth="0.06" color="#1a1208" position="2.55 0.41 2.4"></a-box>
+  <a-box width="0.35" height="0.04" depth="0.28" color="#e8e0cc" position="0.7 0.87 2.1"></a-box>
+  <a-box width="0.35" height="0.04" depth="0.28" color="#d4ccb8" position="0.72 0.91 2.08"></a-box>
+  <!-- Monitor -->
+  <a-box width="0.45" height="0.35" depth="0.35" color="#ccccaa" position="1.5 1.0 1.72"></a-box>
+  <a-box width="0.35" height="0.28" depth="0.02" color="#001400" position="1.5 1.02 1.535"
+    material="color:#001400;emissive:#002200;emissiveIntensity:0.8"></a-box>
+  <!-- Lamp -->
+  <a-cylinder radius="0.02" height="0.5" color="#888" position="1.5 1.07 1.65"></a-cylinder>
+  <a-sphere radius="0.07" color="#ffee99" position="1.5 1.32 1.65"
+    material="color:#ffee99;emissive:#ffcc44;emissiveIntensity:1"></a-sphere>
+  <!-- Mug -->
+  <a-cylinder radius="0.04" height="0.1" color="#1a1a1a" position="2.1 0.87 2.2"></a-cylinder>
+
+  <!-- FILING CABINETS -->
+  <a-box width="0.55" height="1.3" depth="0.5" color="#4a4a44" position="-3.8 0.65 -2"></a-box>
+  <a-box width="0.55" height="1.3" depth="0.5" color="#4a4a44" position="-3.8 0.65 -0.8"></a-box>
+
+  <!-- I WANT TO BELIEVE POSTER -->
+  <a-plane width="0.8" height="1.1" color="#000011" position="-3.49 1.9 -2.8" rotation="0 90 0"></a-plane>
+  <a-sphere radius="0.18" scale="1.8 0.4 0.9" position="-3.49 2.05 -2.8" rotation="0 90 0"
+    material="color:#6644cc;emissive:#221188;emissiveIntensity:0.5"></a-sphere>
+  <a-text value="I WANT TO BELIEVE" color="#ffffff" width="1.2" position="-3.48 1.48 -2.8" rotation="0 90 0" align="center" font="monoid"></a-text>
+
+  <!-- CAMPFIRE -->
+  <a-cylinder radius="0.25" height="0.05" color="#2a1505" position="2 0.025 2"></a-cylinder>
+  <a-cone radius-bottom="0.18" radius-top="0.01" height="0.4" position="2 0.22 2"
+    material="color:#ff6600;emissive:#cc2200;emissiveIntensity:0.9"
+    animation="property:scale;from:1 1 1;to:0.85 1.15 0.85;dur:220;dir:alternate;loop:true;easing:easeInOutSine">
+  </a-cone>
+  <a-light type="point" color="#ff8822" intensity="1.5" distance="5" position="2 0.5 2"
+    animation="property:intensity;from:1.5;to:0.8;dur:200;dir:alternate;loop:true">
+  </a-light>
+
+  <!-- FLUORESCENT TUBES -->
+  <a-box width="1.4" height="0.05" depth="0.1" position="-2 2.98 0"
+    material="color:#ccffcc;emissive:#88cc88;emissiveIntensity:0.5"></a-box>
+  <a-box width="1.4" height="0.05" depth="0.1" position="2 2.98 0"
+    material="color:#ccffcc;emissive:#88cc88;emissiveIntensity:0.5"></a-box>
+
+</a-scene>
+
+<script>
+// Thumbstick movement component
+AFRAME.registerComponent('thumbstick-move', {
+  init: function() {
+    this.rig = document.getElementById('rig');
+    this.axes = [0, 0];
+    this.el.addEventListener('axismove', (e) => {
+      this.axes = e.detail.axis;
+    });
+  },
+  tick: function(t, dt) {
+    const speed = 3.0 * (dt / 1000);
+    const ax = this.axes[0] || 0;
+    const ay = this.axes[1] || 0;
+    if (Math.abs(ax) < 0.15 && Math.abs(ay) < 0.15) return;
+    const cam = document.querySelector('a-camera');
+    const yaw = cam ? cam.object3D.rotation.y : 0;
+    const rigPos = this.rig.object3D.position;
+    rigPos.x += (Math.sin(yaw) * -ay + Math.cos(yaw) * ax) * speed;
+    rigPos.z += (Math.cos(yaw) * ay + Math.sin(yaw) * ax) * speed;  // fixed sign
+    // Clamp to room
+    rigPos.x = Math.max(-4.2, Math.min(4.2, rigPos.x));
+    rigPos.z = Math.max(-3.0, Math.min(3.8, rigPos.z));
   }
+});
 
-  // Animations
-  ufoMesh.position.y=2.05+Math.sin(t*1.1)*0.05;
-  fireMesh.scale.set(0.9+Math.sin(t*9)*0.12,1+Math.sin(t*11)*0.15,0.9+Math.cos(t*7)*0.1);
-  flickerLight.intensity=2.2+Math.sin(t*57)*0.12+Math.sin(t*93)*0.06;
-
-  renderer.render(scene,camera);
-})();
-
-window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+// Right trigger fires raycaster click
+document.getElementById('rhand').addEventListener('triggerdown', function() {
+  const rc = this.components.raycaster;
+  if (!rc) return;
+  const els = rc.intersectedEls;
+  if (els.length > 0) els[0].click();
 });
 </script>
 </body>
