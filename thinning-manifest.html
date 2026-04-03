@@ -501,50 +501,251 @@ function spawnCreatures(){
   });
 }
 
+function mk(tag,attrs,parent){
+  const el=document.createElement('a-'+tag);
+  Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));
+  if(parent)parent.appendChild(el);
+  return el;
+}
+function anim(el,prop,from,to,dur,opts={}){
+  el.setAttribute('animation',`property:${prop};from:${from};to:${to};dur:${dur};dir:${opts.dir||'alternate'};loop:${opts.loop!==false};easing:${opts.easing||'easeInOutSine'}`);
+  return el;
+}
+
+const BUILDERS = {
+  glintfox(g,c){
+    // Body
+    const body=mk('box',{width:'0.45',height:'0.28',depth:'0.7',material:`color:${c.color};roughness:0.8`,'position':'0 0.3 0'},g);
+    anim(body,'scale','1 1 1','1 1.04 1',1800);
+    // Head
+    const head=mk('sphere',{radius:'0.18',material:`color:${c.color};roughness:0.8`,'position':'0 0.46 0.32'},g);
+    anim(head,'rotation','0 0 0','5 0 0',2200);
+    // Snout
+    mk('box',{width:'0.1',height:'0.08',depth:'0.14',material:`color:#cc8844`,'position':'0 0.41 0.45'},g);
+    // Eyes — glowing
+    mk('sphere',{radius:'0.04',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.9;shader:flat`,'position':'0.07 0.5 0.45'},g);
+    mk('sphere',{radius:'0.04',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.9;shader:flat`,'position':'-0.07 0.5 0.45'},g);
+    // Ears
+    mk('cone',{'radius-bottom':'0.05','radius-top':'0.01',height:'0.15',material:`color:${c.color}`,'position':'0.1 0.62 0.28',rotation:'-10 0 20'},g);
+    mk('cone',{'radius-bottom':'0.05','radius-top':'0.01',height:'0.15',material:`color:${c.color}`,'position':'-0.1 0.62 0.28',rotation:'-10 0 -20'},g);
+    // Tail
+    const tail=mk('sphere',{radius:'0.12',scale:'0.8 0.8 1.6',material:`color:${c.color}`,'position':'0 0.32 -0.42'},g);
+    anim(tail,'rotation','0 0 -30','0 0 30',800);
+    // Legs
+    ['0.15 0 0.2','−0.15 0 0.2','0.15 0 -0.2','-0.15 0 -0.2'].forEach(pos=>{
+      mk('cylinder',{radius:'0.05',height:'0.22',material:`color:${c.color}`,'position':pos.replace('−','-'),'position-y':'0.11'},g);
+    });
+    [['0.15','0.11','0.2'],['−0.15','0.11','0.2'],['0.15','0.11','-0.2'],['-0.15','0.11','-0.2']].forEach(([x,y,z])=>{
+      mk('cylinder',{radius:'0.05',height:'0.22',material:`color:${c.color}`,'position':`${x.replace('−','-')} ${y} ${z}`},g);
+    });
+  },
+  drumhare(g,c){
+    const body=mk('sphere',{radius:'0.22',scale:'0.9 1.1 0.9',material:`color:${c.color};roughness:0.9`,'position':'0 0.3 0'},g);
+    anim(body,'scale','0.9 1.1 0.9','0.92 1.14 0.92',1200);
+    const head=mk('sphere',{radius:'0.16',material:`color:${c.color}`,'position':'0 0.55 0.1'},g);
+    anim(head,'rotation','0 0 0','-8 0 0',900);
+    mk('sphere',{radius:'0.06',material:'color:#ffcccc','position':'0 0.52 0.25'},g);
+    mk('sphere',{radius:'0.03',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.8;shader:flat`,'position':'0.05 0.58 0.25'},g);
+    mk('sphere',{radius:'0.03',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.8;shader:flat`,'position':'-0.05 0.58 0.25'},g);
+    // Long ears
+    const ear1=mk('cylinder',{radius:'0.04','height':'0.38',material:`color:${c.color}`,'position':'0.08 0.82 0.08'},g);
+    anim(ear1,'rotation','0 0 8','0 0 18',1600);
+    const ear2=mk('cylinder',{radius:'0.04','height':'0.38',material:`color:${c.color}`,'position':'-0.08 0.82 0.08'},g);
+    anim(ear2,'rotation','0 0 -8','0 0 -18',1400);
+    // Big back feet
+    mk('sphere',{radius:'0.1',scale:'0.7 0.4 1.8',material:`color:${c.color}`,'position':'0.1 0.04 -0.15'},g);
+    mk('sphere',{radius:'0.1',scale:'0.7 0.4 1.8',material:`color:${c.color}`,'position':'-0.1 0.04 -0.15'},g);
+    // Front paws
+    mk('sphere',{radius:'0.06',material:`color:${c.color}`,'position':'0.1 0.12 0.18'},g);
+    mk('sphere',{radius:'0.06',material:`color:${c.color}`,'position':'-0.1 0.12 0.18'},g);
+    // Tail puff
+    mk('sphere',{radius:'0.1',material:`color:#fff;opacity:0.9;roughness:1`,'position':'0 0.28 -0.22'},g);
+  },
+  velvet_stalker(g,c){
+    const body=mk('box',{width:'0.5',height:'0.32',depth:'0.85',material:`color:#111122;roughness:0.6`,'position':'0 0.36 0'},g);
+    anim(body,'scale','1 1 1','1 1.05 1',2400);
+    const head=mk('sphere',{radius:'0.2',material:'color:#111122','position':'0 0.52 0.42'},g);
+    // Glowing spots on body
+    ['0.15 0.5 0.1','-0.15 0.5 0.1','0.15 0.5 -0.1','-0.15 0.5 -0.1','0 0.5 0.25','0 0.5 -0.25'].forEach(pos=>{
+      const spot=mk('sphere',{radius:'0.04',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.8;shader:flat`,'position':pos},g);
+      anim(spot,'material.emissiveIntensity','0.4','1.0',1000+Math.random()*1000);
+    });
+    // Eyes — piercing
+    mk('sphere',{radius:'0.04',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'0.07 0.56 0.6'},g);
+    mk('sphere',{radius:'0.04',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'-0.07 0.56 0.6'},g);
+    // Ears
+    mk('cone',{'radius-bottom':'0.06','radius-top':'0.01',height:'0.14',material:'color:#111122','position':'0.1 0.7 0.38',rotation:'-5 0 15'},g);
+    mk('cone',{'radius-bottom':'0.06','radius-top':'0.01',height:'0.14',material:'color:#111122','position':'-0.1 0.7 0.38',rotation:'-5 0 -15'},g);
+    // Long tail
+    const tail=mk('cylinder',{radius:'0.04',height:'0.7',material:'color:#111122','position':'0 0.4 -0.55',rotation:'30 0 0'},g);
+    anim(tail,'rotation','30 0 -20','30 0 20',1200);
+    // Legs
+    [['0.18','0','0.25'],['-.18','0','0.25'],['0.18','0','-0.25'],['-0.18','0','-0.25']].forEach(([x,y,z])=>{
+      mk('cylinder',{radius:'0.05',height:'0.28',material:'color:#111122','position':`${x} 0.14 ${z}`},g);
+    });
+  },
+  prismatic_heron(g,c){
+    // Body
+    mk('sphere',{radius:'0.18',scale:'0.8 1.2 1.0',material:`color:#e8f0ff;roughness:0.3`,'position':'0 0.8 0'},g);
+    // Long neck
+    const neck=mk('cylinder',{radius:'0.06',height:'0.4',material:'color:#e8f0ff','position':'0 1.12 0.08',rotation:'-10 0 0'},g);
+    anim(neck,'rotation','-10 0 0','-20 0 0',2000);
+    // Head
+    mk('sphere',{radius:'0.1',material:'color:#e8f0ff','position':'0 1.36 0.2'},g);
+    // Beak
+    mk('cone',{'radius-bottom':'0.03','radius-top':'0.01',height:'0.2',material:'color:#ffcc44','position':'0 1.34 0.36',rotation:'90 0 0'},g);
+    // Eyes
+    mk('sphere',{radius:'0.025',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'0.05 1.38 0.28'},g);
+    mk('sphere',{radius:'0.025',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'-0.05 1.38 0.28'},g);
+    // Wings — prismatic
+    const wingR=mk('box',{width:'0.6',height:'0.04',depth:'0.45',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.3;opacity:0.85;transparent:true`,'position':'0.4 0.82 0'},g);
+    anim(wingR,'rotation','0 0 -8','0 0 -20',1800);
+    const wingL=mk('box',{width:'0.6',height:'0.04',depth:'0.45',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.3;opacity:0.85;transparent:true`,'position':'-0.4 0.82 0'},g);
+    anim(wingL,'rotation','0 0 8','0 0 20',1800);
+    // Long legs
+    mk('cylinder',{radius:'0.03',height:'0.7',material:'color:#ffcc44','position':'0.08 0.35 0'},g);
+    mk('cylinder',{radius:'0.03',height:'0.7',material:'color:#ffcc44','position':'-0.08 0.35 0'},g);
+    // Rainbow light underneath wings
+    mk('light',{type:'point',color:'#aaddff',intensity:'1',distance:'3','position':'0 0.8 0'},g);
+  },
+  saltsprite(g,c){
+    // Tiny seahorse — main body curved
+    const body=mk('sphere',{radius:'0.1',scale:'0.6 1.2 0.5',material:`color:${c.color};emissive:${c.glowColor};emissiveIntensity:0.3`,'position':'0 0.5 0'},g);
+    anim(body,'rotation','0 0 -8','0 0 8',1000);
+    // Snout
+    mk('cylinder',{radius:'0.025',height:'0.12',material:`color:${c.color}`,'position':'0 0.6 0.1',rotation:'70 0 0'},g);
+    // Eye
+    mk('sphere',{radius:'0.025',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'0.04 0.62 0.08'},g);
+    // Internal weather system (glowing swirl)
+    const storm=mk('sphere',{radius:'0.06',material:`color:#aaddff;emissive:#88ccff;emissiveIntensity:0.8;opacity:0.5;transparent:true;wireframe:true`,'position':'0 0.48 0'},g);
+    anim(storm,'rotation','0 0 0','0 360 0',2000,{dir:'normal',easing:'linear'});
+    // Tail curl
+    mk('torus',{radius:'0.08','radius-tubular':'0.02',material:`color:${c.color}`,'position':'0 0.35 0',rotation:'90 0 0','arc':'180'},g);
+    // Dorsal fin
+    mk('cone',{'radius-bottom':'0.06','radius-top':'0.01',height:'0.1',material:`color:${c.glowColor};opacity:0.6;transparent:true`,'position':'0.06 0.55 0',rotation:'0 0 -60'},g);
+    mk('light',{type:'point',color:c.glowColor,intensity:'1.2',distance:'3','position':'0 0.5 0'},g);
+  },
+  cogbull(g,c){
+    // Massive body
+    const body=mk('box',{width:'0.8',height:'0.55',depth:'1.2',material:`color:#7a4a22;roughness:0.7;metalness:0.1`,'position':'0 0.65 0'},g);
+    anim(body,'scale','1 1 1','1 1.03 1',2800);
+    // Brass plate on forehead
+    mk('box',{width:'0.35',height:'0.2',depth:'0.08',material:'color:#cc9933;metalness:0.8;roughness:0.3','position':'0 0.98 0.52'},g);
+    // Head
+    const head=mk('box',{width:'0.42',height:'0.38',depth:'0.5',material:`color:#7a4a22;roughness:0.7`,'position':'0 0.88 0.62'},g);
+    anim(head,'rotation','0 0 0','3 0 0',3000);
+    // Eyes
+    mk('sphere',{radius:'0.04',material:'color:#882200;emissive:#660000;emissiveIntensity:0.5','position':'0.14 0.96 0.86'},g);
+    mk('sphere',{radius:'0.04',material:'color:#882200;emissive:#660000;emissiveIntensity:0.5','position':'-0.14 0.96 0.86'},g);
+    // Nostrils
+    mk('sphere',{radius:'0.04',material:'color:#3a1a08','position':'0.07 0.82 0.87'},g);
+    mk('sphere',{radius:'0.04',material:'color:#3a1a08','position':'-0.07 0.82 0.87'},g);
+    // Horns
+    mk('cone',{'radius-bottom':'0.04','radius-top':'0.01',height:'0.22',material:'color:#cc9933;metalness:0.7','position':'0.18 1.1 0.6',rotation:'-10 0 30'},g);
+    mk('cone',{'radius-bottom':'0.04','radius-top':'0.01',height:'0.22',material:'color:#cc9933;metalness:0.7','position':'-0.18 1.1 0.6',rotation:'-10 0 -30'},g);
+    // Gear spine
+    ['0 0.95 0.1','0 0.95 -0.1','0 0.95 -0.3','0 0.95 -0.5'].forEach(pos=>{
+      const gear=mk('torus',{radius:'0.1','radius-tubular':'0.025',material:'color:#cc9933;metalness:0.8','position':pos,'rotation':'0 0 0'},g);
+      anim(gear,'rotation',`0 0 0`,`0 0 ${Math.random()<0.5?360:-360}`,3000+Math.random()*2000,{dir:'normal',easing:'linear'});
+    });
+    // Legs
+    [['0.3','0','0.35'],['-.3','0','0.35'],['0.3','0','-0.35'],['-0.3','0','-0.35']].forEach(([x,y,z])=>{
+      mk('cylinder',{radius:'0.1',height:'0.55',material:`color:#6a3a18`,'position':`${x} 0.27 ${z}`},g);
+    });
+    // Tail
+    const tail=mk('cylinder',{radius:'0.04',height:'0.4',material:`color:#7a4a22`,'position':'0 0.6 -0.65',rotation:'30 0 0'},g);
+    anim(tail,'rotation','30 0 -15','30 0 15',700);
+  },
+  thundermother(g,c){
+    // Body — fat moth body
+    mk('sphere',{radius:'0.18',scale:'0.7 1.2 0.7',material:`color:#220033;roughness:0.6`,'position':'0 0.7 0'},g);
+    // Head
+    mk('sphere',{radius:'0.12',material:'color:#220033','position':'0 0.98 0.1'},g);
+    // Antennae
+    const ant1=mk('cylinder',{radius:'0.015',height:'0.4',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.6`,'position':'0.08 1.18 0.1',rotation:'-20 0 25'},g);
+    anim(ant1,'rotation','-20 0 25','-20 0 40',1200);
+    const ant2=mk('cylinder',{radius:'0.015',height:'0.4',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.6`,'position':'-0.08 1.18 0.1',rotation:'-20 0 -25'},g);
+    anim(ant2,'rotation','-20 0 -25','-20 0 -40',1000);
+    // Eyes glowing
+    mk('sphere',{radius:'0.03',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'0.05 1.0 0.19'},g);
+    mk('sphere',{radius:'0.03',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':'-0.05 1.0 0.19'},g);
+    // Upper wings — large, bioluminescent
+    const wu1=mk('box',{width:'0.9',height:'0.04',depth:'0.65',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.5;opacity:0.75;transparent:true`,'position':'0.55 0.75 -0.05'},g);
+    anim(wu1,'rotation','0 0 -5','0 0 -18',1400);
+    const wu2=mk('box',{width:'0.9',height:'0.04',depth:'0.65',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.5;opacity:0.75;transparent:true`,'position':'-0.55 0.75 -0.05'},g);
+    anim(wu2,'rotation','0 0 5','0 0 18',1400);
+    // Lower wings
+    const wl1=mk('box',{width:'0.6',height:'0.04',depth:'0.45',material:`color:#441166;emissive:#881188;emissiveIntensity:0.3;opacity:0.65;transparent:true`,'position':'0.45 0.6 0.05'},g);
+    anim(wl1,'rotation','0 0 -8','0 0 -22',1100);
+    const wl2=mk('box',{width:'0.6',height:'0.04',depth:'0.45',material:`color:#441166;emissive:#881188;emissiveIntensity:0.3;opacity:0.65;transparent:true`,'position':'-0.45 0.6 0.05'},g);
+    anim(wl2,'rotation','0 0 8','0 0 22',1100);
+    // Electric glow
+    mk('light',{type:'point',color:c.glowColor,intensity:'1.5',distance:'5','position':'0 0.7 0'},g);
+    // Legs (6 — it's a moth)
+    [['0.12','0.5','0.12'],['-.12','0.5','0.12'],['0.16','0.5','0'],['-.16','0.5','0'],['0.12','0.5','-0.1'],['-0.12','0.5','-0.1']].forEach(([x,y,z])=>{
+      mk('cylinder',{radius:'0.015',height:'0.2',material:'color:#330044','position':`${x} ${y} ${z}`,rotation:`${20+Math.random()*20} 0 ${(Math.random()-0.5)*30}`},g);
+    });
+  },
+  gloomweaver(g,c){
+    // Bulbous abdomen
+    const abd=mk('sphere',{radius:'0.22',material:`color:#112211;roughness:0.5`,'position':'0 0.35 -0.12'},g);
+    anim(abd,'scale','1 1 1','1.05 1.05 1.05',2000);
+    // Cephalothorax
+    mk('sphere',{radius:'0.16',material:'color:#0a1a0a','position':'0 0.38 0.18'},g);
+    // 8 eyes — glowing green
+    const eyePositions=[['0.08','0.48','0.3'],['-.08','0.48','0.3'],['0.05','0.44','0.32'],['-.05','0.44','0.32'],['0.12','0.44','0.26'],['-.12','0.44','0.26'],['0.15','0.4','0.22'],['-.15','0.4','0.22']];
+    eyePositions.forEach(([x,y,z])=>{
+      mk('sphere',{radius:'0.022',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:1;shader:flat`,'position':`${x} ${y} ${z}`},g);
+    });
+    // 8 legs — jointed, reaching outward
+    const legPairs=[15,50,130,165];
+    legPairs.forEach((ang,i)=>{
+      [-1,1].forEach(side=>{
+        const legG=document.createElement('a-entity');
+        legG.setAttribute('position','0 0.38 0.1');
+        // Upper leg
+        const ul=mk('cylinder',{radius:'0.025',height:'0.35',material:'color:#0a1a0a','position':'0 0 0',rotation:`0 ${ang*side} ${-40*side}`},legG);
+        // Lower leg
+        const ll=mk('cylinder',{radius:'0.02',height:'0.3',material:'color:#112211','position':'0 0 0',rotation:`0 ${ang*side} ${-70*side}`},legG);
+        g.appendChild(legG);
+        anim(ul,'rotation',`0 ${ang*side} ${-40*side}`,`0 ${ang*side} ${-50*side}`,800+i*200);
+      });
+    });
+    // Silk strand hanging (dark web)
+    mk('cylinder',{radius:'0.006',height:'0.6',material:`color:#113311;opacity:0.7;transparent:true`,'position':'0.15 0.1 -0.1',rotation:'10 0 5'},g);
+    mk('cylinder',{radius:'0.006',height:'0.5',material:`color:#113311;opacity:0.7;transparent:true`,'position':'-0.12 0.12 -0.08',rotation:'-8 0 -4'},g);
+    mk('light',{type:'point',color:c.glowColor,intensity:'0.8',distance:'3','position':'0 0.4 0'},g);
+  }
+};
+
 function buildCreatureEntity(c,x,z){
   const g=document.createElement('a-entity');
   g.setAttribute('class','interact');
   g.setAttribute('position',`${x.toFixed(2)} 0 ${z.toFixed(2)}`);
   g.dataset.creatureId=c.id;
 
-  // Glow orb
-  const glow=document.createElement('a-sphere');
-  glow.setAttribute('radius','0.35');
-  glow.setAttribute('position','0 0.5 0');
-  glow.setAttribute('material',`color:${c.color};emissive:${c.glowColor};emissiveIntensity:0.5;opacity:0.85;transparent:true`);
-  glow.setAttribute('animation',`property:scale;from:1 1 1;to:1.08 1.12 1.08;dur:${1800+Math.floor(Math.random()*1000)};dir:alternate;loop:true;easing:easeInOutSine`);
-  g.appendChild(glow);
+  // Idle bob animation on whole creature
+  anim(g,'position',`${x.toFixed(2)} 0 ${z.toFixed(2)}`,`${x.toFixed(2)} 0.06 ${z.toFixed(2)}`,1600+Math.floor(Math.random()*800));
 
-  // Emoji label
-  const label=document.createElement('a-text');
-  label.setAttribute('value',c.emoji);
-  label.setAttribute('position','0 1.1 0');
-  label.setAttribute('align','center');
-  label.setAttribute('width','2');
-  label.setAttribute('look-at','#cam');
-  g.appendChild(label);
+  // Build species-specific body
+  const buildFn=BUILDERS[c.id]||BUILDERS.glintfox;
+  buildFn(g,c);
 
-  // Name label
+  // Floating name label
   const name=document.createElement('a-text');
   name.setAttribute('value',c.name);
   name.setAttribute('color',c.glowColor);
-  name.setAttribute('position','0 1.5 0');
+  name.setAttribute('position','0 1.8 0');
   name.setAttribute('align','center');
-  name.setAttribute('width','2.5');
+  name.setAttribute('width','2.8');
   name.setAttribute('look-at','#cam');
   g.appendChild(name);
 
-  // Hover light
-  const light=document.createElement('a-light');
-  light.setAttribute('type','point');
-  light.setAttribute('color',c.glowColor);
-  light.setAttribute('intensity','0.8');
-  light.setAttribute('distance','4');
-  light.setAttribute('position','0 0.5 0');
-  g.appendChild(light);
+  // Subtle ground glow ring
+  const ring=mk('torus',{radius:'0.4','radius-tubular':'0.02',material:`color:${c.glowColor};emissive:${c.glowColor};emissiveIntensity:0.4;opacity:0.4;transparent:true`,'position':'0 0.02 0','rotation':'-90 0 0'},g);
+  anim(ring,'scale','1 1 1','1.15 1.15 1.15',1200);
 
   g.addEventListener('click',()=>encounterCreature(c.id));
-
   return g;
 }
 
