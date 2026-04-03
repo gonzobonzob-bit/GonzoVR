@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>THE THINNING MANIFEST</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;overflow:hidden;font-family:'Courier New',monospace;}
+
+#ui{position:fixed;inset:0;pointer-events:none;z-index:100;}
+
+/* TOP BAR */
+#topbar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:12px 18px;background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);}
+.stat{pointer-events:auto;}
+.stat .sl{font-size:8px;letter-spacing:3px;color:#a0784a;margin-bottom:2px;}
+.stat .sv{font-size:16px;color:#f0c87a;letter-spacing:1px;text-shadow:0 0 8px rgba(240,200,122,0.4);}
+
+/* COMPASS */
+#compass{position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  color:#a0784a;font-size:11px;letter-spacing:4px;pointer-events:none;}
+
+/* NOTIFICATION */
+#notif{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;pointer-events:none;opacity:0;transition:opacity 0.5s;}
+#notif-title{font-size:28px;letter-spacing:4px;color:#f0c87a;text-shadow:0 0 20px rgba(240,200,122,0.6);}
+#notif-sub{font-size:11px;letter-spacing:3px;color:#a0784a;margin-top:6px;}
+
+/* MANIFEST JOURNAL */
+#journal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:540px;max-width:93vw;background:rgba(8,5,2,0.97);
+  border:1px solid #6b4a1e;padding:28px;display:none;z-index:300;
+  font-family:'Courier New',monospace;}
+#journal .jtop{font-size:8px;letter-spacing:5px;color:#6b4a1e;margin-bottom:10px;}
+#journal .jname{font-size:24px;color:#f0c87a;letter-spacing:3px;margin-bottom:4px;}
+#journal .jclass{font-size:9px;letter-spacing:4px;color:#a0784a;margin-bottom:14px;}
+#journal .jdiv{height:1px;background:#2a1a08;margin-bottom:14px;}
+#journal .jdesc{font-size:12px;color:#c8a870;line-height:1.9;margin-bottom:16px;}
+#journal .jstatus{font-size:10px;letter-spacing:2px;margin-bottom:18px;}
+#journal .jbtns{display:flex;gap:8px;}
+#journal .jbtn{flex:1;background:transparent;border:1px solid #6b4a1e;color:#a0784a;
+  font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;
+  padding:10px 8px;cursor:pointer;pointer-events:auto;text-align:center;}
+#journal .jbtn:hover,.jbtn.active{border-color:#f0c87a;color:#f0c87a;background:rgba(240,200,122,0.05);}
+#journal .jbtn.red{border-color:#8b2020;color:#8b2020;}
+
+/* CREATURE NEARBY INDICATOR */
+#nearby{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+  color:#a0784a;font-size:10px;letter-spacing:3px;pointer-events:none;
+  opacity:0;transition:opacity 0.4s;text-align:center;}
+
+/* COMPANIONS BAR */
+#companions{position:fixed;bottom:16px;left:16px;pointer-events:none;}
+#companions .clabel{font-size:8px;letter-spacing:3px;color:#6b4a1e;margin-bottom:4px;}
+#companions .clist{display:flex;gap:6px;flex-wrap:wrap;max-width:200px;}
+.cpip{width:28px;height:28px;border:1px solid #6b4a1e;display:flex;align-items:center;justify-content:center;font-size:14px;}
+
+/* CONTROLS HINT */
+#hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  color:#4a3018;font-size:9px;letter-spacing:2px;pointer-events:none;white-space:nowrap;}
+
+/* MANIFEST COUNT */
+#mcount{position:fixed;bottom:16px;right:16px;text-align:right;pointer-events:none;}
+#mcount .ml{font-size:8px;letter-spacing:3px;color:#6b4a1e;}
+#mcount .mv{font-size:18px;color:#f0c87a;}
+
+/* TITLE SCREEN */
+#titlescreen{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:500;text-align:center;padding:20px;}
+#titlescreen h1{font-size:clamp(28px,6vw,52px);color:#f0c87a;letter-spacing:8px;
+  text-shadow:0 0 40px rgba(240,200,122,0.4);margin-bottom:8px;line-height:1.1;}
+#titlescreen .tsub{font-size:10px;letter-spacing:6px;color:#6b4a1e;margin-bottom:30px;}
+#titlescreen .tdesc{font-size:12px;color:#a0784a;line-height:1.8;max-width:480px;margin-bottom:30px;}
+#titlescreen .tstart{padding:14px 44px;background:transparent;border:1px solid #f0c87a;
+  color:#f0c87a;font-family:'Courier New',monospace;font-size:12px;letter-spacing:4px;cursor:pointer;}
+#titlescreen .tstart:hover{background:rgba(240,200,122,0.08);}
+</style>
+</head>
+<body>
+
+<!-- TITLE SCREEN -->
+<div id="titlescreen">
+  <h1>THE THINNING<br>MANIFEST</h1>
+  <div class="tsub">AETHERMOOR · 1878</div>
+  <div class="tdesc">
+    The membrane between worlds is thinning.<br>
+    Creatures are crossing over.<br>
+    Someone left you a journal.<br>
+    The last entry is dated three days from now.<br><br>
+    <em>Complete the Manifest before the worlds cancel each other.</em>
+  </div>
+  <button class="tstart" id="startBtn">▶ ENTER AETHERMOOR</button>
+</div>
+
+<!-- HUD -->
+<div id="ui">
+  <div id="topbar">
+    <div class="stat"><div class="sl">DAY</div><div class="sv" id="sday">1</div></div>
+    <div class="stat"><div class="sl">COMPANIONS</div><div class="sv" id="scomp">0</div></div>
+    <div class="stat" style="text-align:right"><div class="sl">MANIFEST</div><div class="sv" id="smani">0/163</div></div>
+  </div>
+  <div id="compass" id="compass">N</div>
+  <div id="notif"><div id="notif-title"></div><div id="notif-sub"></div></div>
+  <div id="nearby">✦ CREATURE NEARBY — APPROACH</div>
+  <div id="companions">
+    <div class="clabel">COMPANIONS</div>
+    <div class="clist" id="clist"></div>
+  </div>
+  <div id="hint">LEFT STICK=MOVE &nbsp;·&nbsp; RIGHT STICK=TURN &nbsp;·&nbsp; AIM+TRIGGER=INTERACT</div>
+  <div id="mcount"><div class="ml">CATALOGUED</div><div class="mv" id="mnum">0</div></div>
+</div>
+
+<!-- JOURNAL PANEL -->
+<div id="journal">
+  <div class="jtop">THE THINNING MANIFEST — FIELD ENTRY</div>
+  <div class="jname" id="jname"></div>
+  <div class="jclass" id="jclass"></div>
+  <div class="jdiv"></div>
+  <div class="jdesc" id="jdesc"></div>
+  <div class="jstatus" id="jstatus"></div>
+  <div class="jbtns" id="jbtns"></div>
+</div>
+
+<script>
+// ── CREATURE DATA ──────────────────────────────────────────────────────────
+const CREATURES = [
+  {
+    id:'glintfox', name:'GLINTFOX', class:'LAND · COMMON',
+    emoji:'🦊', color:'#cc6600', glowColor:'#ff9900',
+    desc:'A fox whose fur shifts color with its mood — blue when curious, gold when happy, deep red when it wants to be left alone. Highly intelligent. Will steal your Manifest if you leave it unattended. Makes an extraordinary companion once trust is established, which requires patience you may not believe you possess.',
+    mood:'curious', disposition:'friendly',
+    followChance:0.65, wanderChance:0.3,
+    greeting:'The Glintfox tilts its head. Its fur flickers gold.',
+    actions:['OFFER KINDNESS','OBSERVE QUIETLY','SHARE FOOD'],
+    actionResults:['The Glintfox bumps its head against your hand. It begins to follow.','The Glintfox appreciates your restraint. It inches closer.','The Glintfox sniffs the offering and its fur blazes gold. It sits at your feet.']
+  },
+  {
+    id:'drumhare', name:'DRUMHARE', class:'LAND · COMMON',
+    emoji:'🐇', color:'#997744', glowColor:'#ccaa55',
+    desc:'An oversized hare whose back feet produce complex rhythmic patterns when it runs. The rhythm is a language. The Moor Wanderers have partially decoded it — they say the Drumhares are telling jokes, mostly. Occasionally something more urgent. Will not be caught. May choose to run alongside you.',
+    mood:'playful', disposition:'neutral',
+    followChance:0.45, wanderChance:0.5,
+    greeting:'The Drumhare thumps twice. A pause. Three times. It watches you.',
+    actions:['TAP BACK','STAY STILL','MOVE SLOWLY PAST'],
+    actionResults:['The Drumhare goes wild with thumping — apparently delighted — and begins to run alongside you.','The Drumhare approves of your stillness. It hops closer.','The Drumhare watches you pass. Then — after a long moment — follows.']
+  },
+  {
+    id:'velvet_stalker', name:'VELVET STALKER', class:'LAND · RARE',
+    emoji:'🐈‍⬛', color:'#220033', glowColor:'#8800cc',
+    desc:'A large black cat with luminescent spots that pulse slowly, like a heartbeat. Does not hunt prey. Hunts secrets. Is drawn to things being concealed. May have been watching you since you arrived in Aethermoor. Will not be owned. Will not be named. May choose to walk beside you, for reasons of its own.',
+    mood:'watchful', disposition:'mysterious',
+    followChance:0.3, wanderChance:0.6,
+    greeting:'The Velvet Stalker was not here a moment ago. Now it is. It blinks once, slowly.',
+    actions:['SHOW THE MANIFEST','ACKNOWLEDGE IT','WAIT'],
+    actionResults:['The Velvet Stalker stares at the Manifest for a long time. Then at you. It begins to walk. You understand you should follow its lead.','The Stalker dips its head slightly. This is respect, you realize.','The Velvet Stalker sits. So do you. Eventually it moves closer.']
+  },
+  {
+    id:'prismatic_heron', name:'PRISMATIC HERON', class:'AIR · UNCOMMON',
+    emoji:'🦅', color:'#0044aa', glowColor:'#44aaff',
+    desc:'A large wading bird whose wings refract light like living prisms, casting rainbow patterns across the ground when it flies. Nests in the Brass Forest canopy. Has been known to carry messages between settlements in exchange for specific berries. Currently carrying a message that is not for you, but it keeps looking at you anyway.',
+    mood:'regal', disposition:'neutral',
+    followChance:0.4, wanderChance:0.4,
+    greeting:'The Heron opens its wings briefly. Rainbows scatter across the grass.',
+    actions:['BOW SLIGHTLY','OFFER A BERRY','WATCH IT FLY'],
+    actionResults:['The Heron seems satisfied by this. It lands nearer and regards you with one amber eye.','The Heron takes the berry with extraordinary delicacy and then just... stays.','It rises into the air. The light scatters everywhere. Then it circles back and lands beside you.']
+  },
+  {
+    id:'saltsprite', name:'SALTSPRITE', class:'WATER · UNCOMMON',
+    emoji:'🐠', color:'#007755', glowColor:'#00ffaa',
+    desc:'Tiny. Looks like a seahorse with a translucent body containing a miniature weather system — you can see storms forming and clearing inside it. The one currently living in your left coat pocket arrived without your knowledge approximately three hours ago. Its name, according to the Manifest, is Brindlethwaite. It has opinions about which direction to travel. They are usually correct.',
+    mood:'opinionated', disposition:'friendly',
+    followChance:0.9, wanderChance:0.15,
+    greeting:"Something moves in your coat pocket. Brindlethwaite surfaces and blows a tiny gust of wind in a specific direction.",
+    actions:['FOLLOW ITS DIRECTION','CHECK YOUR POCKET','SAY HELLO'],
+    actionResults:['You follow where Brindlethwaite points. Something interesting is definitely that way.','Brindlethwaite is fully settled in your pocket. It seems to have redecorated.','A tiny storm forms inside Brindlethwaite and dissipates. You take this as warmth.']
+  },
+  {
+    id:'cogbull', name:'COGBULL', class:'LAND · UNCOMMON',
+    emoji:'🐂', color:'#885522', glowColor:'#cc8833',
+    desc:'A massive bovine with brass-plated foreheads and gearwork along the spine. Entirely gentle unless threatened. Was a regular bull in someone\'s previous world, came through the Thinning, and the Aetheric energy did the rest. Does not seem bothered by this. Carries things. Enormous things. Will carry you if it decides you are acceptable.',
+    mood:'calm', disposition:'friendly',
+    followChance:0.55, wanderChance:0.25,
+    greeting:'The Cogbull turns one enormous eye toward you. Its gears make a soft ticking sound.',
+    actions:['APPROACH SLOWLY','PLACE HAND ON FLANK','STAND BESIDE IT'],
+    actionResults:['The Cogbull allows this. The gears along its back tick faster — pleasure, you think.','The Cogbull leans into your hand with the weight of a small building. It begins to walk with you.','The Cogbull positions itself beside you like a ship coming alongside a dock. You are accepted.']
+  },
+  {
+    id:'thundermother', name:'THUNDERMOTHER', class:'AIR · RARE',
+    emoji:'🦋', color:'#331166', glowColor:'#aa44ff',
+    desc:'An enormous moth with an eight-foot wingspan. Nocturnal. Wings absorb lightning and release it as soft bioluminescent light. Communities near electrical storms invite them to roost as living light sources. Currently the sky is producing a distant electrical storm and the Thundermother\'s wings are beginning to glow. It is very beautiful and also very large.',
+    mood:'serene', disposition:'neutral',
+    followChance:0.35, wanderChance:0.45,
+    greeting:'The Thundermother\'s wings pulse with soft violet light. The air smells like ozone.',
+    actions:['STAND IN ITS LIGHT','REACH TOWARD IT','OBSERVE FROM DISTANCE'],
+    actionResults:['The Thundermother settles its wings around you like a cloak of living light. Something about this feels like being remembered.','It allows your hand to brush one wing. You feel a gentle static charge. Its antennae drift toward you.','It notices you noticing it. Slowly it drifts closer, wings casting shifting purple light.']
+  },
+  {
+    id:'gloomweaver', name:'GLOOMWEAVER', class:'UNDERGROUND · UNCOMMON',
+    emoji:'🕷️', color:'#223322', glowColor:'#44ff88',
+    desc:'Spider-adjacent. The size of a medium dog. Spins webs of solidified darkness — structural webs that hold up sections of Root Dark tunnel ceiling that would otherwise collapse. Is performing a civic service and is aware of this. Smug but not unpleasant. The Root Darkers consider them essential infrastructure. They consider themselves art.',
+    mood:'smug', disposition:'neutral',
+    followChance:0.4, wanderChance:0.35,
+    greeting:'The Gloomweaver pauses its work and looks at you with all eight eyes simultaneously.',
+    actions:['ADMIRE ITS WEB','INTRODUCE YOURSELF','OFFER ASSISTANCE'],
+    actionResults:['The Gloomweaver straightens up. You\'ve said the right thing. It spins a small darkness-web near your feet — a gift.','It considers you for a long moment, then touches one leg briefly to your boot. You have been acknowledged.','It gestures to a section of tunnel that needs support. You help position materials. You are now colleagues.']
+  },
+];
+
+// ── GAME STATE ──────────────────────────────────────────────────────────────
+const G = {
+  day: 1, hour: 6,
+  manifest: [],
+  companions: [],
+  nearbyCreature: null,
+  dayTimer: null,
+  started: false,
+  yaw: 0,
+  ac: null,
+};
+
+// Creature instances in world
+const WORLD_CREATURES = [];
+
+// ── AFRAME SCENE SETUP ──────────────────────────────────────────────────────
+const SCENE_HTML = `
+<a-scene background="color:#0a1505" renderer="antialias:true" vr-mode-ui="enabled:true" loading-screen="backgroundColor:#000;dotsColor:#f0c87a" id="mainscene">
+
+  <!-- LIGHTS -->
+  <a-light type="ambient" color="#3a5a2a" intensity="1.8"></a-light>
+  <a-light type="directional" color="#f0c87a" intensity="1.5" position="-2 4 -3" id="sunlight"></a-light>
+  <a-light type="directional" color="#aaccff" intensity="0.4" position="3 3 2"></a-light>
+  <a-light type="point" color="#f0c87a" intensity="1.2" distance="8" position="0 2.5 0" id="hearthlight"></a-light>
+
+  <!-- CAMERA RIG -->
+  <a-entity id="rig" position="0 0 5">
+    <a-entity id="cam" camera look-controls="pointerLockEnabled:false" wasd-controls="enabled:false" position="0 1.65 0">
+      <a-entity cursor="fuse:false" raycaster="objects:.interact;far:6"
+        geometry="primitive:ring;radiusInner:0.009;radiusOuter:0.014"
+        material="color:#f0c87a;shader:flat;opacity:0.8" position="0 0 -1">
+      </a-entity>
+    </a-entity>
+    <a-entity id="lhand" oculus-touch-controls="hand:left"></a-entity>
+    <a-entity id="rhand" oculus-touch-controls="hand:right"
+      laser-controls="hand:right"
+      raycaster="objects:.interact;far:6;showLine:true;lineColor:#f0c87a;lineOpacity:0.4">
+    </a-entity>
+  </a-entity>
+
+  <!-- SKY -->
+  <a-sky id="sky" color="#0a1505"></a-sky>
+
+  <!-- STARS -->
+  <a-entity id="stars"></a-entity>
+
+  <!-- MOON 1 -->
+  <a-sphere id="moon1" radius="2.5" position="-30 35 -60"
+    material="color:#f0e8c8;emissive:#d4c890;emissiveIntensity:0.6;shader:flat">
+  </a-sphere>
+  <!-- MOON 2 — smaller, blue tint -->
+  <a-sphere id="moon2" radius="1.2" position="20 28 -55"
+    material="color:#c8d4f0;emissive:#aabbdd;emissiveIntensity:0.5;shader:flat">
+  </a-sphere>
+
+  <!-- GROUND — Shimmer Flats -->
+  <a-plane rotation="-90 0 0" width="200" height="200" material="color:#2a4a1a;roughness:1" position="0 0 0"></a-plane>
+  <!-- Ground color variation patches -->
+  <a-plane rotation="-90 0 0" width="30" height="25" material="color:#3a5a22;opacity:0.5;transparent:true" position="15 0.01 -20"></a-plane>
+  <a-plane rotation="-90 0 0" width="25" height="35" material="color:#1a3a10;opacity:0.4;transparent:true" position="-25 0.01 10"></a-plane>
+  <a-plane rotation="-90 0 0" width="40" height="20" material="color:#4a6a28;opacity:0.3;transparent:true" position="10 0.01 30"></a-plane>
+
+  <!-- SHIMMER GRASS — tall grass patches -->
+  <a-entity id="grass"></a-entity>
+
+  <!-- HEARTHWICK HOMESTEAD -->
+  <a-entity id="hearthwick" position="-8 0 -8">
+    <!-- Main farmhouse -->
+    <a-box width="5" height="3" depth="4" material="color:#5a3a18;roughness:0.9" position="0 1.5 0"></a-box>
+    <!-- Roof -->
+    <a-cone radius-bottom="3.2" radius-top="0.1" height="2" material="color:#3a2008;roughness:1" position="0 3.8 0" segments-radial="4" rotation="0 45 0"></a-cone>
+    <!-- Windows — glowing warm -->
+    <a-plane width="0.6" height="0.5" material="color:#ffdd88;emissive:#ffcc44;emissiveIntensity:0.8;shader:flat" position="0.8 1.6 -2.01"></a-plane>
+    <a-plane width="0.6" height="0.5" material="color:#ffdd88;emissive:#ffcc44;emissiveIntensity:0.8;shader:flat" position="-0.8 1.6 -2.01"></a-plane>
+    <!-- Door -->
+    <a-box width="0.9" height="1.8" depth="0.1" material="color:#2a1a08" position="0 0.9 -2.01"></a-box>
+    <!-- Chimney -->
+    <a-box width="0.5" height="1.5" depth="0.5" material="color:#4a2a10" position="1.2 4.2 0.5"></a-box>
+    <!-- Smoke puff -->
+    <a-sphere radius="0.3" position="1.2 5.2 0.5" material="color:#888;opacity:0.2;transparent:true"
+      animation="property:position;from:1.2 5.2 0.5;to:1.4 6.5 0.5;dur:3000;dir:alternate;loop:true;easing:easeInOutSine">
+    </a-sphere>
+    <!-- Steam boiler -->
+    <a-cylinder radius="0.4" height="1.2" material="color:#886633;metalness:0.6" position="-2.8 0.6 0.5"></a-cylinder>
+    <a-cylinder radius="0.08" height="0.8" material="color:#666;metalness:0.9" position="-2.8 1.6 0.5"></a-cylinder>
+    <!-- Fence -->
+    <a-box width="6" height="0.08" depth="0.08" material="color:#5a3018" position="0 0.8 -3.5"></a-box>
+    <a-box width="0.08" height="0.8" depth="0.08" material="color:#5a3018" position="-3 0.4 -3.5"></a-box>
+    <a-box width="0.08" height="0.8" depth="0.08" material="color:#5a3018" position="-1 0.4 -3.5"></a-box>
+    <a-box width="0.08" height="0.8" depth="0.08" material="color:#5a3018" position="1 0.4 -3.5"></a-box>
+    <a-box width="0.08" height="0.8" depth="0.08" material="color:#5a3018" position="3 0.4 -3.5"></a-box>
+    <!-- Sign -->
+    <a-box width="1.4" height="0.5" depth="0.05" material="color:#3a2008" position="0 1.4 -3.5"></a-box>
+    <a-text value="HEARTHWICK" color="#f0c87a" width="2.5" position="0 1.42 -3.48" align="center"></a-text>
+    <!-- Well -->
+    <a-cylinder radius="0.4" height="0.6" material="color:#4a3010" position="2.5 0.3 1.5" segments-radial="12"></a-cylinder>
+    <a-torus radius="0.4" radius-tubular="0.04" material="color:#3a2008" position="2.5 0.62 1.5" rotation="90 0 0"></a-torus>
+    <!-- Lantern post -->
+    <a-cylinder radius="0.04" height="2.5" material="color:#4a3010" position="-3.5 1.25 -1.5"></a-cylinder>
+    <a-box width="0.2" height="0.3" depth="0.2" material="color:#cc9933;emissive:#ffaa00;emissiveIntensity:0.8" position="-3.5 2.65 -1.5"></a-box>
+    <a-light type="point" color="#ffaa44" intensity="1.5" distance="5" position="-3.5 2.65 -1.5"></a-light>
+  </a-entity>
+
+  <!-- SETTLER TOWN - distant -->
+  <a-entity position="20 0 -15">
+    <!-- Saloon -->
+    <a-box width="6" height="4" depth="5" material="color:#4a3010" position="0 2 0"></a-box>
+    <a-box width="7" height="0.3" depth="1" material="color:#3a2008" position="0 4 -2.5"></a-box>
+    <a-text value="THE WANDERING MULE" color="#f0c87a" width="4" position="0 4.4 -2.4" align="center"></a-text>
+    <a-light type="point" color="#ff9933" intensity="2" distance="10" position="0 3 0"></a-light>
+    <!-- General store -->
+    <a-box width="4" height="3.5" depth="4" material="color:#5a3818" position="8 1.75 0"></a-box>
+    <a-text value="SHIMMER GOODS" color="#f0c87a" width="3" position="8 3.9 -2" align="center"></a-text>
+    <!-- Blacksmith -->
+    <a-box width="5" height="3" depth="4" material="color:#2a1a08" position="-7 1.5 0"></a-box>
+    <a-cylinder radius="0.3" height="2" material="color:#1a1a1a" position="-7 4 0.5"></a-cylinder>
+    <a-sphere radius="0.25" position="-7 5.1 0.5" material="color:#ff6600;emissive:#cc3300;emissiveIntensity:0.8;opacity:0.6;transparent:true"
+      animation="property:scale;from:1 1 1;to:1.3 1.3 1.3;dur:400;dir:alternate;loop:true"></a-sphere>
+    <!-- Dirigible tethered -->
+    <a-sphere radius="1.5" scale="1 0.6 1" position="0 12 0" material="color:#8b4513;roughness:0.8"></a-sphere>
+    <a-cylinder radius="0.04" height="8" material="color:#5a3018" position="0 8 0"></a-cylinder>
+    <a-box width="1.2" height="0.4" depth="0.5" material="color:#4a2808" position="0 10 0"></a-box>
+  </a-entity>
+
+  <!-- BRASS FOREST - west -->
+  <a-entity id="brassforest" position="-35 0 -10"></a-entity>
+
+  <!-- VELVET CANYON visible far east -->
+  <a-entity position="60 0 0">
+    <a-box width="4" height="20" depth="60" material="color:#4a1a2a;roughness:1" position="0 10 0"></a-box>
+    <a-box width="4" height="18" depth="60" material="color:#3a1020;roughness:1" position="5 9 0"></a-box>
+  </a-entity>
+
+  <!-- CREATURE SPAWN ZONES (invisible markers, JS places creatures) -->
+  <a-entity id="creatures"></a-entity>
+
+  <!-- FLOATING AETHERIC PARTICLES -->
+  <a-entity id="particles"></a-entity>
+
+  <!-- WILDFLOWERS scattered -->
+  <a-entity id="flowers"></a-entity>
+
+</a-scene>`;
+
+document.body.insertAdjacentHTML('beforeend', SCENE_HTML);
+
+// ── STICK MOVEMENT ──────────────────────────────────────────────────────────
+AFRAME.registerComponent('gonzo-move', {
+  schema:{speed:{default:4},turnSnap:{default:30}},
+  init(){
+    this.canSnap=true;
+    this.ax=[0,0,0,0];
+    const lh=document.getElementById('lhand');
+    const rh=document.getElementById('rhand');
+    if(lh) lh.addEventListener('axismove',e=>{this.ax[0]=e.detail.axis[0]||0;this.ax[1]=e.detail.axis[1]||0;});
+    if(rh) rh.addEventListener('axismove',e=>{this.ax[2]=e.detail.axis[0]||0;});
+  },
+  tick(t,dt){
+    const lx=this.ax[0],ly=this.ax[1],rx=this.ax[2];
+    // Snap turn
+    if(Math.abs(rx)>0.5&&this.canSnap){
+      G.yaw-=Math.sign(rx)*this.data.turnSnap*(Math.PI/180);
+      this.canSnap=false;
+    }
+    if(Math.abs(rx)<0.3)this.canSnap=true;
+    // Move
+    if(Math.abs(lx)>0.12||Math.abs(ly)>0.12){
+      const spd=this.data.speed*(dt/1000);
+      const p=this.el.object3D.position;
+      p.x+=(Math.sin(G.yaw)*-ly+Math.cos(G.yaw)*lx)*spd;
+      p.z+=(Math.cos(G.yaw)*ly+Math.sin(G.yaw)*lx)*spd;
+      p.x=Math.max(-80,Math.min(80,p.x));
+      p.z=Math.max(-80,Math.min(80,p.z));
+    }
+    this.el.object3D.rotation.y=G.yaw;
+  }
+});
+
+// ── SCENE LOADED ────────────────────────────────────────────────────────────
+document.querySelector('a-scene').addEventListener('loaded',()=>{
+  buildEnvironment();
+  spawnCreatures();
+  setupInteraction();
+  startDayCycle();
+  initAudio();
+});
+
+document.getElementById('startBtn').onclick=()=>{
+  document.getElementById('titlescreen').style.display='none';
+  G.started=true;
+  // Apply gonzo-move after scene loaded
+  const rig=document.getElementById('rig');
+  if(rig)rig.setAttribute('gonzo-move','speed:4');
+};
+
+// ── BUILD ENVIRONMENT ────────────────────────────────────────────────────────
+function buildEnvironment(){
+  const scene=document.querySelector('a-scene');
+
+  // Stars
+  const sc=document.getElementById('stars');
+  for(let i=0;i<300;i++){
+    const s=document.createElement('a-sphere');
+    const th=Math.random()*Math.PI*2,ph=Math.random()*Math.PI*0.5,r=120;
+    s.setAttribute('radius',(0.08+Math.random()*0.18).toFixed(2));
+    s.setAttribute('position',`${(r*Math.sin(ph)*Math.cos(th)).toFixed(1)} ${(r*Math.cos(ph)+10).toFixed(1)} ${(r*Math.sin(ph)*Math.sin(th)).toFixed(1)}`);
+    s.setAttribute('material',`color:#ffffff;emissive:#ffffff;emissiveIntensity:${(0.5+Math.random()*0.5).toFixed(2)};shader:flat`);
+    s.setAttribute('segments-width','4');s.setAttribute('segments-height','4');
+    sc.appendChild(s);
+  }
+
+  // Grass tufts
+  const gc=document.getElementById('grass');
+  for(let i=0;i<80;i++){
+    const g=document.createElement('a-entity');
+    const x=(Math.random()-0.5)*120,z=(Math.random()-0.5)*120;
+    // Skip homestead area
+    if(Math.abs(x+8)<8&&Math.abs(z+8)<8)continue;
+    const h=0.3+Math.random()*0.6;
+    const blade=document.createElement('a-box');
+    blade.setAttribute('width','0.05');blade.setAttribute('height',h.toFixed(2));blade.setAttribute('depth','0.3');
+    blade.setAttribute('position',`0 ${h/2} 0`);
+    blade.setAttribute('material',`color:${['#4a6a22','#5a7a2a','#3a5a1a','#6a8a32'][Math.floor(Math.random()*4)]};roughness:1`);
+    blade.setAttribute('rotation',`0 ${Math.random()*360} ${-10+Math.random()*20}`);
+    g.appendChild(blade);
+    const b2=blade.cloneNode();b2.setAttribute('rotation',`0 ${Math.random()*360} ${-10+Math.random()*20}`);g.appendChild(b2);
+    g.setAttribute('position',`${x.toFixed(1)} 0 ${z.toFixed(1)}`);
+    gc.appendChild(g);
+  }
+
+  // Wildflowers
+  const fc=document.getElementById('flowers');
+  const flowerColors=['#ff88cc','#ffcc44','#cc88ff','#ff6644','#44ddff','#88ff44','#ff44aa'];
+  for(let i=0;i<60;i++){
+    const f=document.createElement('a-sphere');
+    const x=(Math.random()-0.5)*100,z=(Math.random()-0.5)*100;
+    f.setAttribute('radius',(0.08+Math.random()*0.12).toFixed(2));
+    f.setAttribute('position',`${x.toFixed(1)} ${(0.2+Math.random()*0.3).toFixed(2)} ${z.toFixed(1)}`);
+    const col=flowerColors[Math.floor(Math.random()*flowerColors.length)];
+    f.setAttribute('material',`color:${col};emissive:${col};emissiveIntensity:0.4;shader:flat`);
+    fc.appendChild(f);
+  }
+
+  // Aetheric particles (floating motes)
+  const pc=document.getElementById('particles');
+  for(let i=0;i<40;i++){
+    const p=document.createElement('a-sphere');
+    const x=(Math.random()-0.5)*60,y=0.5+Math.random()*3,z=(Math.random()-0.5)*60;
+    p.setAttribute('radius',(0.04+Math.random()*0.06).toFixed(2));
+    p.setAttribute('position',`${x.toFixed(1)} ${y.toFixed(2)} ${z.toFixed(1)}`);
+    const cols=['#f0c87a','#88ff88','#cc88ff','#44ddff','#ff8844'];
+    const col=cols[Math.floor(Math.random()*cols.length)];
+    p.setAttribute('material',`color:${col};emissive:${col};emissiveIntensity:0.8;shader:flat;opacity:0.6;transparent:true`);
+    p.setAttribute('animation',`property:position;from:${x.toFixed(1)} ${y.toFixed(2)} ${z.toFixed(1)};to:${(x+(Math.random()-0.5)*3).toFixed(1)} ${(y+0.5+Math.random()).toFixed(2)} ${(z+(Math.random()-0.5)*3).toFixed(1)};dur:${3000+Math.floor(Math.random()*4000)};dir:alternate;loop:true;easing:easeInOutSine`);
+    pc.appendChild(p);
+  }
+
+  // Brass forest trees
+  const bf=document.getElementById('brassforest');
+  for(let i=0;i<18;i++){
+    const x=(Math.random()-0.5)*30,z=(Math.random()-0.5)*30;
+    const h=4+Math.random()*8;
+    const trunk=document.createElement('a-cylinder');
+    trunk.setAttribute('radius',(0.2+Math.random()*0.3).toFixed(2));
+    trunk.setAttribute('height',h.toFixed(1));
+    trunk.setAttribute('position',`${x.toFixed(1)} ${(h/2).toFixed(1)} ${z.toFixed(1)}`);
+    trunk.setAttribute('material','color:#8b6914;metalness:0.5;roughness:0.5');
+    bf.appendChild(trunk);
+    const canopy=document.createElement('a-sphere');
+    canopy.setAttribute('radius',(1.5+Math.random()*2).toFixed(1));
+    canopy.setAttribute('position',`${x.toFixed(1)} ${(h+1).toFixed(1)} ${z.toFixed(1)}`);
+    canopy.setAttribute('material',`color:#cc9922;emissive:#886611;emissiveIntensity:0.2;metalness:0.4`);
+    bf.appendChild(canopy);
+  }
+}
+
+// ── SPAWN CREATURES ──────────────────────────────────────────────────────────
+function spawnCreatures(){
+  const container=document.getElementById('creatures');
+  const positions=[
+    [5,0,8],[12,0,3],[3,0,-12],[18,0,15],[-5,0,12],
+    [8,0,-8],[15,0,-5],[-12,0,5],[-15,0,-10],[20,0,-12],
+    [6,0,20],[-8,0,-18],[25,0,5],[-20,0,15],[10,0,-20]
+  ];
+
+  CREATURES.forEach((c,i)=>{
+    const pos=positions[i%positions.length];
+    const x=pos[0]+(Math.random()-0.5)*6;
+    const z=pos[2]+(Math.random()-0.5)*6;
+    const el=buildCreatureEntity(c,x,z);
+    container.appendChild(el);
+    WORLD_CREATURES.push({def:c,el,x,z,state:'idle',wanderTimer:Math.random()*10});
+  });
+}
+
+function buildCreatureEntity(c,x,z){
+  const g=document.createElement('a-entity');
+  g.setAttribute('class','interact');
+  g.setAttribute('position',`${x.toFixed(2)} 0 ${z.toFixed(2)}`);
+  g.dataset.creatureId=c.id;
+
+  // Glow orb
+  const glow=document.createElement('a-sphere');
+  glow.setAttribute('radius','0.35');
+  glow.setAttribute('position','0 0.5 0');
+  glow.setAttribute('material',`color:${c.color};emissive:${c.glowColor};emissiveIntensity:0.5;opacity:0.85;transparent:true`);
+  glow.setAttribute('animation',`property:scale;from:1 1 1;to:1.08 1.12 1.08;dur:${1800+Math.floor(Math.random()*1000)};dir:alternate;loop:true;easing:easeInOutSine`);
+  g.appendChild(glow);
+
+  // Emoji label
+  const label=document.createElement('a-text');
+  label.setAttribute('value',c.emoji);
+  label.setAttribute('position','0 1.1 0');
+  label.setAttribute('align','center');
+  label.setAttribute('width','2');
+  label.setAttribute('look-at','#cam');
+  g.appendChild(label);
+
+  // Name label
+  const name=document.createElement('a-text');
+  name.setAttribute('value',c.name);
+  name.setAttribute('color',c.glowColor);
+  name.setAttribute('position','0 1.5 0');
+  name.setAttribute('align','center');
+  name.setAttribute('width','2.5');
+  name.setAttribute('look-at','#cam');
+  g.appendChild(name);
+
+  // Hover light
+  const light=document.createElement('a-light');
+  light.setAttribute('type','point');
+  light.setAttribute('color',c.glowColor);
+  light.setAttribute('intensity','0.8');
+  light.setAttribute('distance','4');
+  light.setAttribute('position','0 0.5 0');
+  g.appendChild(light);
+
+  g.addEventListener('click',()=>encounterCreature(c.id));
+
+  return g;
+}
+
+// ── ENCOUNTER SYSTEM ────────────────────────────────────────────────────────
+function encounterCreature(id){
+  const c=CREATURES.find(x=>x.id===id);
+  if(!c)return;
+
+  const journal=document.getElementById('journal');
+  document.getElementById('jname').textContent=c.name;
+  document.getElementById('jclass').textContent=c.class;
+  document.getElementById('jdesc').textContent=c.desc;
+
+  const inManifest=G.manifest.includes(id);
+  const isCompanion=G.companions.includes(id);
+
+  let statusText=c.greeting;
+  if(isCompanion)statusText='Your companion regards you warmly.';
+  document.getElementById('jstatus').innerHTML=`<span style="color:#a0784a">${statusText}</span>`;
+
+  const btns=document.getElementById('jbtns');
+  btns.innerHTML='';
+
+  if(!inManifest){
+    // Add to manifest
+    const recordBtn=document.createElement('button');
+    recordBtn.className='jbtn active';recordBtn.textContent='RECORD IN MANIFEST';
+    recordBtn.onclick=()=>{
+      G.manifest.push(id);
+      notify('RECORDED','Added to the Manifest',c.glowColor);
+      updateHUD();closeJournal();
+      beep(440,0.1);setTimeout(()=>beep(550,0.08),100);setTimeout(()=>beep(660,0.07),200);
+    };
+    btns.appendChild(recordBtn);
+  }
+
+  if(!isCompanion){
+    c.actions.forEach((action,i)=>{
+      const btn=document.createElement('button');
+      btn.className='jbtn';btn.textContent=action;
+      btn.onclick=()=>{
+        notify(action,c.actionResults[i],c.glowColor);
+        // Random chance to become companion based on disposition
+        if(Math.random()<c.followChance){
+          G.companions.push(id);
+          notify('NEW COMPANION','Joined your journey',c.glowColor);
+          updateCompanions();
+        }
+        if(!G.manifest.includes(id)){G.manifest.push(id);updateHUD();}
+        closeJournal();
+        beep(330,0.08);setTimeout(()=>beep(440,0.06),120);
+      };
+      btns.appendChild(btn);
+    });
+  } else {
+    const chatBtn=document.createElement('button');
+    chatBtn.className='jbtn';chatBtn.textContent='SPEND TIME TOGETHER';
+    chatBtn.onclick=()=>{
+      notify('COMPANION BOND','Your connection deepens.',c.glowColor);
+      // Companions may wander off
+      if(Math.random()<c.wanderChance){
+        G.companions=G.companions.filter(x=>x!==id);
+        notify('WANDERED OFF',c.name+' has gone exploring. They may return.',c.color);
+        updateCompanions();
+      }
+      closeJournal();
+    };
+    btns.appendChild(chatBtn);
+  }
+
+  const closeBtn=document.createElement('button');
+  closeBtn.className='jbtn red';closeBtn.textContent='CLOSE';
+  closeBtn.onclick=closeJournal;
+  btns.appendChild(closeBtn);
+
+  journal.style.display='block';
+  beep(220,0.06);
+}
+
+function closeJournal(){document.getElementById('journal').style.display='none';}
+window.closeJournal=closeJournal;
+
+// ── CREATURE WANDER LOGIC ──────────────────────────────────────────────────
+setInterval(()=>{
+  if(!G.started)return;
+  const rig=document.getElementById('rig');
+  if(!rig)return;
+  const rp=rig.object3D.position;
+
+  let nearestDist=Infinity;
+  let nearest=null;
+
+  WORLD_CREATURES.forEach(wc=>{
+    wc.wanderTimer-=2;
+    if(wc.wanderTimer<=0){
+      // Wander to new position
+      const nx=wc.x+(Math.random()-0.5)*8;
+      const nz=wc.z+(Math.random()-0.5)*8;
+      wc.x=Math.max(-70,Math.min(70,nx));
+      wc.z=Math.max(-70,Math.min(70,nz));
+      if(wc.el)wc.el.setAttribute('position',`${wc.x.toFixed(2)} 0 ${wc.z.toFixed(2)}`);
+      wc.wanderTimer=8+Math.random()*15;
+    }
+
+    // Check proximity to player
+    const dx=wc.x-rp.x,dz=wc.z-rp.z;
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    if(dist<nearestDist){nearestDist=dist;nearest=wc;}
+  });
+
+  // Nearby indicator
+  const nearbyEl=document.getElementById('nearby');
+  if(nearestDist<8){
+    nearbyEl.style.opacity='1';
+    nearbyEl.textContent=`✦ ${nearest.def.name} NEARBY — APPROACH`;
+  } else {
+    nearbyEl.style.opacity='0';
+  }
+},2000);
+
+// ── DAY/NIGHT CYCLE ──────────────────────────────────────────────────────────
+function startDayCycle(){
+  G.dayTimer=setInterval(()=>{
+    G.hour+=1;
+    if(G.hour>=24){G.hour=0;G.day++;updateHUD();}
+    updateSky();
+    // Companion wander check
+    if(Math.random()<0.05&&G.companions.length>0){
+      const wanderer=G.companions[Math.floor(Math.random()*G.companions.length)];
+      const c=CREATURES.find(x=>x.id===wanderer);
+      if(c&&Math.random()<c.wanderChance){
+        G.companions=G.companions.filter(x=>x!==wanderer);
+        notify('WANDERED',c.name+' has gone exploring.',c.color);
+        updateCompanions();
+      }
+    }
+    // Companions return
+    if(Math.random()<0.08){
+      const gone=CREATURES.filter(c=>G.manifest.includes(c.id)&&!G.companions.includes(c.id));
+      if(gone.length>0){
+        const returner=gone[Math.floor(Math.random()*gone.length)];
+        if(Math.random()<0.4){
+          G.companions.push(returner.id);
+          notify('RETURNED',returner.name+' has come back.',returner.glowColor);
+          updateCompanions();
+        }
+      }
+    }
+  },8000); // 8 seconds = 1 hour
+}
+
+function updateSky(){
+  const sky=document.getElementById('sky');
+  const sun=document.getElementById('sunlight');
+  const h=G.hour;
+  let skyColor,sunIntensity,sunColor;
+  if(h>=6&&h<10){skyColor='#1a3a2a';sunIntensity=1.0;sunColor='#ffcc88';}
+  else if(h>=10&&h<16){skyColor='#2a5a3a';sunIntensity=1.5;sunColor='#f0c87a';}
+  else if(h>=16&&h<20){skyColor='#1a2a1a';sunIntensity=0.8;sunColor='#ff9944';}
+  else if(h>=20&&h<22){skyColor='#0a1a0a';sunIntensity=0.2;sunColor='#ff6622';}
+  else{skyColor='#050f05';sunIntensity=0;sunColor='#000000';}
+  if(sky)sky.setAttribute('color',skyColor);
+  if(sun){sun.setAttribute('intensity',sunIntensity);sun.setAttribute('color',sunColor);}
+}
+
+// ── INTERACTION SETUP ────────────────────────────────────────────────────────
+function setupInteraction(){
+  const rhand=document.getElementById('rhand');
+  if(!rhand)return;
+  rhand.addEventListener('triggerdown',()=>{
+    const rc=rhand.components['raycaster'];if(!rc)return;
+    const els=rc.intersectedEls;if(!els.length)return;
+    // Find interactable parent
+    let target=els[0];
+    while(target&&!target.dataset.creatureId&&target!==document.body)target=target.parentElement||target.parentNode;
+    if(target&&target.dataset.creatureId)encounterCreature(target.dataset.creatureId);
+  });
+}
+
+// ── HUD ─────────────────────────────────────────────────────────────────────
+function updateHUD(){
+  document.getElementById('sday').textContent=G.day;
+  document.getElementById('scomp').textContent=G.companions.length;
+  document.getElementById('smani').textContent=G.manifest.length+'/163';
+  document.getElementById('mnum').textContent=G.manifest.length;
+}
+
+function updateCompanions(){
+  const list=document.getElementById('clist');
+  list.innerHTML='';
+  G.companions.forEach(id=>{
+    const c=CREATURES.find(x=>x.id===id);
+    if(!c)return;
+    const pip=document.createElement('div');
+    pip.className='cpip';pip.title=c.name;pip.textContent=c.emoji;
+    pip.style.borderColor=c.glowColor;
+    list.appendChild(pip);
+  });
+  document.getElementById('scomp').textContent=G.companions.length;
+}
+
+// ── NOTIFICATIONS ────────────────────────────────────────────────────────────
+function notify(title,sub,color='#f0c87a'){
+  const el=document.getElementById('notif');
+  const t=document.getElementById('notif-title');
+  const s=document.getElementById('notif-sub');
+  t.textContent=title;t.style.color=color;
+  s.textContent=sub;
+  el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',3500);
+}
+
+// ── AUDIO ────────────────────────────────────────────────────────────────────
+function initAudio(){
+  if(G.ac)return;
+  try{
+    G.ac=new(window.AudioContext||window.webkitAudioContext)();
+    // Ambient drone — Aethermoor wind
+    const buf=G.ac.createBuffer(1,G.ac.sampleRate*4,G.ac.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*0.3;
+    const src=G.ac.createBufferSource();src.buffer=buf;src.loop=true;
+    const f1=G.ac.createBiquadFilter();f1.type='lowpass';f1.frequency.value=200;
+    const f2=G.ac.createBiquadFilter();f2.type='highpass';f2.frequency.value=80;
+    const g=G.ac.createGain();g.gain.value=0.03;
+    src.connect(f1);f1.connect(f2);f2.connect(g);g.connect(G.ac.destination);src.start();
+    // Occasional chime
+    playChime();
+  }catch(e){}
+}
+
+function playChime(){
+  if(!G.ac)return;
+  const freqs=[523,659,784,1047];
+  const f=freqs[Math.floor(Math.random()*freqs.length)];
+  const o=G.ac.createOscillator(),g=G.ac.createGain();
+  o.type='sine';o.frequency.value=f;
+  o.connect(g);g.connect(G.ac.destination);
+  g.gain.setValueAtTime(0,G.ac.currentTime);
+  g.gain.linearRampToValueAtTime(0.04,G.ac.currentTime+0.1);
+  g.gain.exponentialRampToValueAtTime(0.001,G.ac.currentTime+2);
+  o.start();o.stop(G.ac.currentTime+2);
+  setTimeout(playChime,8000+Math.random()*12000);
+}
+
+function beep(freq,vol=0.1){
+  if(!G.ac)return;
+  const o=G.ac.createOscillator(),g=G.ac.createGain();
+  o.connect(g);g.connect(G.ac.destination);
+  o.frequency.value=freq;
+  g.gain.setValueAtTime(vol,G.ac.currentTime);
+  g.gain.linearRampToValueAtTime(0,G.ac.currentTime+0.15);
+  o.start();o.stop(G.ac.currentTime+0.15);
+}
+
+updateHUD();
+</script>
+</body>
+</html>
