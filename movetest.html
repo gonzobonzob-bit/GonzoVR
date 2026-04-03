@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MOVE TEST</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<style>
+body{margin:0;background:#000;}
+#log{position:fixed;top:10px;left:10px;color:#0f0;font-family:monospace;font-size:12px;z-index:999;background:rgba(0,0,0,0.7);padding:8px;max-width:300px;}
+</style>
+</head>
+<body>
+<div id="log">Move test — push left stick in VR</div>
+
+<script>
+AFRAME.registerComponent('stick-move', {
+  init() {
+    this.vel = new THREE.Vector3();
+    this.moved = false;
+
+    // Listen on left controller
+    const scene = this.el.sceneEl;
+    scene.addEventListener('loaded', () => {
+      const lc = document.getElementById('lc');
+      if (!lc) return;
+
+      lc.addEventListener('thumbstickmoved', (e) => {
+        this.vel.x = e.detail.x;
+        this.vel.z = e.detail.y;
+        document.getElementById('log').textContent =
+          'STICK: x=' + e.detail.x.toFixed(2) + ' y=' + e.detail.y.toFixed(2);
+      });
+
+      // Also try axismove
+      lc.addEventListener('axismove', (e) => {
+        const ax = e.detail.axis;
+        document.getElementById('log').textContent =
+          'AXIS: ' + ax.map(v=>v.toFixed(2)).join(', ');
+        if (Math.abs(ax[0]) > 0.1) this.vel.x = ax[0];
+        if (Math.abs(ax[1]) > 0.1) this.vel.z = ax[1];
+      });
+    });
+  },
+
+  tick(t, dt) {
+    if (!this.vel.x && !this.vel.z) return;
+    const speed = 3 * (dt / 1000);
+    const cam = document.getElementById('cam');
+    const yaw = cam ? cam.object3D.rotation.y : 0;
+    const p = this.el.object3D.position;
+    p.x += (Math.sin(yaw) * -this.vel.z + Math.cos(yaw) * this.vel.x) * speed;
+    p.z += (Math.cos(yaw) * this.vel.z  + Math.sin(yaw) * this.vel.x) * speed;
+    // Decay
+    this.vel.x *= 0.85;
+    this.vel.z *= 0.85;
+  }
+});
+</script>
+
+<a-scene background="color:#111" vr-mode-ui="enabled:true">
+  <a-light type="ambient" color="#fff" intensity="1.5"></a-light>
+
+  <a-entity id="rig" position="0 0 0" stick-move>
+    <a-entity id="cam" camera look-controls="pointerLockEnabled:false" position="0 1.6 0"></a-entity>
+    <a-entity id="lc" oculus-touch-controls="hand:left"></a-entity>
+    <a-entity id="rc" oculus-touch-controls="hand:right"></a-entity>
+  </a-entity>
+
+  <!-- Big flat floor with grid so you can see movement -->
+  <a-plane rotation="-90 0 0" width="40" height="40" color="#222"></a-plane>
+
+  <!-- Grid lines so you can tell you're moving -->
+  <a-entity>
+    <a-box width="40" height="0.02" depth="0.05" color="#0f0" position="0 0.01 -4"></a-box>
+    <a-box width="40" height="0.02" depth="0.05" color="#0f0" position="0 0.01 -2"></a-box>
+    <a-box width="40" height="0.02" depth="0.05" color="#0f0" position="0 0.01 0"></a-box>
+    <a-box width="40" height="0.02" depth="0.05" color="#0f0" position="0 0.01 2"></a-box>
+    <a-box width="40" height="0.02" depth="0.05" color="#0f0" position="0 0.01 4"></a-box>
+    <a-box width="0.05" height="0.02" depth="40" color="#0f0" position="-4 0.01 0"></a-box>
+    <a-box width="0.05" height="0.02" depth="40" color="#0f0" position="-2 0.01 0"></a-box>
+    <a-box width="0.05" height="0.02" depth="40" color="#0f0" position="0 0.01 0"></a-box>
+    <a-box width="0.05" height="0.02" depth="40" color="#0f0" position="2 0.01 0"></a-box>
+    <a-box width="0.05" height="0.02" depth="40" color="#0f0" position="4 0.01 0"></a-box>
+  </a-entity>
+
+  <!-- Reference cubes at known spots -->
+  <a-box width="0.5" height="0.5" depth="0.5" color="#f00" position="0 0.25 -3"></a-box>
+  <a-box width="0.5" height="0.5" depth="0.5" color="#00f" position="3 0.25 0"></a-box>
+  <a-box width="0.5" height="0.5" depth="0.5" color="#ff0" position="-3 0.25 0"></a-box>
+  <a-box width="0.5" height="0.5" depth="0.5" color="#0ff" position="0 0.25 3"></a-box>
+
+  <!-- Text labels -->
+  <a-text value="NORTH" color="#f00" position="0 1 -3" align="center"></a-text>
+  <a-text value="EAST" color="#00f" position="3 1 0" align="center"></a-text>
+  <a-text value="WEST" color="#ff0" position="-3 1 0" align="center"></a-text>
+  <a-text value="SOUTH" color="#0ff" position="0 1 3" align="center"></a-text>
+
+  <a-text value="PUSH LEFT STICK TO MOVE" color="#0f0" position="0 2 -2" align="center" scale="1.5 1.5 1.5"></a-text>
+</a-scene>
+</body>
+</html>
