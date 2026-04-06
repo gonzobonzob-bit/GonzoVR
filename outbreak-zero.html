@@ -4,7 +4,46 @@
 <meta charset="UTF-8">
 <title>OUTBREAK ZERO VR</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-<script src="movement.js"></script>
+<script>
+AFRAME.registerComponent('gonzo-move', {
+  schema: { speed: { default: 3.5 }, turnSnap: { default: 30 } },
+  init() {
+    this.vel = { x: 0, z: 0 };
+    this.rightX = 0;
+    this.canSnap = true;
+    this.yaw = 0;
+    this.el.sceneEl.addEventListener('loaded', () => {
+      const lc = document.getElementById('lhand');
+      const rc = document.getElementById('rhand');
+      if (lc) lc.addEventListener('axismove', (e) => {
+        const ax = e.detail.axis;
+        this.vel.x = Math.abs(ax[0]) > 0.12 ? ax[0] : 0;
+        this.vel.z = Math.abs(ax[1]) > 0.12 ? ax[1] : 0;
+      });
+      if (rc) rc.addEventListener('axismove', (e) => {
+        const ax = e.detail.axis;
+        this.rightX = Math.abs(ax[0]) > 0.3 ? ax[0] : 0;
+      });
+    });
+  },
+  tick(t, dt) {
+    if (this.rightX !== 0 && this.canSnap) {
+      this.yaw -= Math.sign(this.rightX) * this.data.turnSnap * (Math.PI / 180);
+      this.canSnap = false;
+    }
+    if (this.rightX === 0) this.canSnap = true;
+    if (this.vel.x !== 0 || this.vel.z !== 0) {
+      const speed = this.data.speed * (dt / 1000);
+      const p = this.el.object3D.position;
+      p.x += (Math.sin(this.yaw) * -this.vel.z + Math.cos(this.yaw) * this.vel.x) * speed;
+      p.z += (Math.cos(this.yaw) * this.vel.z  + Math.sin(this.yaw) * this.vel.x) * speed;
+      p.x = Math.max(-9, Math.min(9, p.x));
+      p.z = Math.max(-9, Math.min(9, p.z));
+    }
+    this.el.object3D.rotation.y = this.yaw;
+  }
+});
+</script>
 <style>
 body{margin:0;background:#000;}
 #hud{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:flex-start;padding:12px 18px;background:linear-gradient(to bottom,rgba(0,0,0,0.85),transparent);pointer-events:none;font-family:'Courier New',monospace;}
