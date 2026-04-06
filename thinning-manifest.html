@@ -12,6 +12,11 @@ AFRAME.registerComponent('gonzo-move', {
     this.rightX = 0;
     this.canSnap = true;
     this.yaw = 0;
+    this.keys = {};
+    // Keyboard
+    window.addEventListener('keydown', e => this.keys[e.code] = true);
+    window.addEventListener('keyup',   e => this.keys[e.code] = false);
+    // Quest controllers
     this.el.sceneEl.addEventListener('loaded', () => {
       const lc = document.getElementById('lhand');
       const rc = document.getElementById('rhand');
@@ -27,16 +32,30 @@ AFRAME.registerComponent('gonzo-move', {
     });
   },
   tick(t, dt) {
+    // Snap turn from right stick
     if (this.rightX !== 0 && this.canSnap) {
       this.yaw -= Math.sign(this.rightX) * this.data.turnSnap * (Math.PI / 180);
       this.canSnap = false;
     }
     if (this.rightX === 0) this.canSnap = true;
-    if (this.vel.x !== 0 || this.vel.z !== 0) {
+
+    // Keyboard turn with Q/E or arrow keys
+    if (this.keys['KeyQ'] || this.keys['ArrowLeft'])  this.yaw += 1.5 * (dt/1000);
+    if (this.keys['KeyE'] || this.keys['ArrowRight']) this.yaw -= 1.5 * (dt/1000);
+
+    // Stick movement
+    let vx = this.vel.x, vz = this.vel.z;
+    // Keyboard movement (WASD)
+    if (this.keys['KeyW'] || this.keys['ArrowUp'])    vz = -1;
+    if (this.keys['KeyS'] || this.keys['ArrowDown'])  vz =  1;
+    if (this.keys['KeyA'])                            vx = -1;
+    if (this.keys['KeyD'])                            vx =  1;
+
+    if (vx !== 0 || vz !== 0) {
       const speed = this.data.speed * (dt / 1000);
       const p = this.el.object3D.position;
-      p.x += (Math.sin(this.yaw) * -this.vel.z + Math.cos(this.yaw) * this.vel.x) * speed;
-      p.z += (Math.cos(this.yaw) * this.vel.z  + Math.sin(this.yaw) * this.vel.x) * speed;
+      p.x += (Math.sin(this.yaw) * -vz + Math.cos(this.yaw) * vx) * speed;
+      p.z += (Math.cos(this.yaw) * vz  + Math.sin(this.yaw) * vx) * speed;
       p.x = Math.max(-80, Math.min(80, p.x));
       p.z = Math.max(-80, Math.min(80, p.z));
     }
@@ -127,20 +146,21 @@ body{background:#050f03;overflow:hidden;font-family:'Courier New',monospace;}
 </div>
 
 <a-scene
-  background="color:#0a1a05"
-  renderer="antialias:true;maxCanvasWidth:1280;maxCanvasHeight:720"
+  background="color:#1a2e0a"
+  renderer="antialias:true;colorManagement:false"
   vr-mode-ui="enabled:true"
   loading-screen="backgroundColor:#020a01;dotsColor:#f0c87a"
   stats="false"
 >
-  <!-- LIGHTS -->
-  <a-light type="ambient" color="#4a6a30" intensity="1.8"></a-light>
-  <a-light type="directional" id="sun" color="#f0c87a" intensity="1.5" position="-3 8 -5"></a-light>
-  <a-light type="directional" color="#8899ff" intensity="0.3" position="4 4 4"></a-light>
+  <!-- LIGHTS — strong enough to see everything -->
+  <a-light type="ambient" color="#aabb88" intensity="3.0"></a-light>
+  <a-light type="directional" id="sun" color="#f0c87a" intensity="2.5" position="-3 8 -5"></a-light>
+  <a-light type="directional" color="#8899ff" intensity="0.8" position="4 4 4"></a-light>
+  <a-light type="point" color="#ffeecc" intensity="2.5" distance="30" position="0 5 0"></a-light>
 
-  <!-- RIG — movement.js handles stick movement -->
+  <!-- RIG — Quest controllers + keyboard/mouse -->
   <a-entity id="rig" position="0 0 6" gonzo-move="speed:4">
-    <a-entity id="cam" camera look-controls="pointerLockEnabled:false" wasd-controls="enabled:false" position="0 1.65 0">
+    <a-entity id="cam" camera look-controls="pointerLockEnabled:false" wasd-controls="acceleration:20" position="0 1.65 0">
       <a-entity cursor="fuse:false"
         raycaster="objects:.creature;far:7"
         geometry="primitive:ring;radiusInner:0.009;radiusOuter:0.014"

@@ -67,7 +67,7 @@ body{margin:0;background:#000;}
 </style>
 </head>
 <body>
-<div id="hud">LEFT STICK=MOVE &nbsp; RIGHT STICK=TURN &nbsp; AIM+TRIGGER=READ CARD</div>
+<div id="hud">LEFT STICK=MOVE · RIGHT STICK=TURN · TRIGGER=READ · DESKTOP: CLICK TO LOOK · WASD=MOVE</div>
 <div id="panel">
   <div class="pid" id="pid"></div>
   <div class="pcls" id="pcls"></div>
@@ -113,15 +113,15 @@ function openCase(i){
 window.openCase=openCase;
 </script>
 
-<a-scene background="color:#2a1f0e" renderer="antialias:true" vr-mode-ui="enabled:true" loading-screen="backgroundColor:#000;dotsColor:#00ff41">
+<a-scene background="color:#2a1f0e" renderer="antialias:true;colorManagement:false" vr-mode-ui="enabled:true" loading-screen="backgroundColor:#000;dotsColor:#00ff41">
 
-  <a-light type="ambient" color="#ccaa88" intensity="1.5"></a-light>
+  <a-light type="ambient" color="#ccaa88" intensity="2.5"></a-light>
   <a-light type="point" color="#ffeecc" intensity="2.5" distance="14" position="0 2.8 0"></a-light>
   <a-light type="point" color="#ffeecc" intensity="2" distance="10" position="0 2.8 -2"></a-light>
   <a-light type="point" color="#ffdd88" intensity="2.5" distance="7" position="1.5 1.3 2"></a-light>
 
   <a-entity id="rig" position="0 0 3" gonzo-move="speed:3.5">
-    <a-camera look-controls="pointerLockEnabled:false" wasd-controls="enabled:false" position="0 1.6 0">
+    <a-camera look-controls="pointerLockEnabled:true" wasd-controls="acceleration:20" position="0 1.6 0">
       <a-entity cursor="fuse:false" raycaster="objects:.card;far:8"
         geometry="primitive:ring;radiusInner:0.012;radiusOuter:0.018"
         material="color:#00ff41;shader:flat" position="0 0 -1">

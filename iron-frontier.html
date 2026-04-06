@@ -76,16 +76,16 @@ body{margin:0;background:#0a0500;}
 </div>
 <div id="banner"><div id="btitle">WAVE 1</div><div id="bsub">RAIDERS FROM THE NORTH</div></div>
 <div id="gameover"><h1>FORT FALLEN</h1><p id="fs">SURVIVED 0 WAVES</p><button onclick="restartGame()">&#8635; TRY AGAIN</button></div>
-<div id="info">LEFT STICK=MOVE &nbsp; RIGHT STICK=TURN &nbsp; AIM GROUND+TRIGGER=PLACE TOWER</div>
+<div id="info">LEFT STICK=MOVE · RIGHT STICK=TURN · TRIGGER=PLACE · DESKTOP: CLICK TO LOOK · WASD=MOVE</div>
 
-<a-scene background="color:#1a0d08" renderer="antialias:true" vr-mode-ui="enabled:true" loading-screen="backgroundColor:#000;dotsColor:#c9a84c">
-  <a-light type="ambient" color="#998866" intensity="2.5"></a-light>
+<a-scene background="color:#1a0d08" renderer="antialias:true;colorManagement:false" vr-mode-ui="enabled:true" loading-screen="backgroundColor:#000;dotsColor:#c9a84c">
+  <a-light type="ambient" color="#aaa077" intensity="3.5"></a-light>
   <a-light type="directional" color="#ff8833" intensity="2.0" position="-3 5 -8"></a-light>
   <a-light type="point" color="#ffcc44" intensity="3.0" distance="20" position="0 4 0"></a-light>
   <a-light type="point" color="#ff8822" intensity="2.0" distance="8" position="2 0.5 2" animation="property:intensity;from:2;to:1;dur:220;dir:alternate;loop:true"></a-light>
 
   <a-entity id="rig" position="0 0 0" gonzo-move="speed:5">
-    <a-camera look-controls="pointerLockEnabled:false" wasd-controls="enabled:false" position="0 1.65 0">
+    <a-camera look-controls="pointerLockEnabled:true" wasd-controls="acceleration:25" position="0 1.65 0">
       <a-entity cursor="fuse:false" raycaster="objects:.ground;far:45"
         geometry="primitive:ring;radiusInner:0.01;radiusOuter:0.016"
         material="color:#c9a84c;shader:flat" position="0 0 -1">
